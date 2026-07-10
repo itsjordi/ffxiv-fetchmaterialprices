@@ -184,6 +184,14 @@
     cursor:pointer; font-style:italic;
   }
   .recent-chip:hover{border-color:var(--accent-dim); color:var(--accent);}
+  .fav-chip-wrap{display:inline-flex; align-items:center; gap:2px;}
+  .fav-thumb{width:16px; height:16px; object-fit:cover; border-radius:3px; margin-right:5px; vertical-align:middle;}
+  .fav-remove{
+    background:transparent; border:1px solid var(--border); color:var(--dim);
+    font-family:inherit; font-size:.7rem; padding:3px 7px; border-radius:10px; cursor:pointer;
+  }
+  .fav-remove:hover{border-color:var(--bad); color:var(--bad);}
+  #glamourFavoriteToggleBtn.active-fav{background:var(--accent); color:var(--paper); border-color:var(--accent);}
 </style>
 </head>
 <body>
@@ -526,6 +534,18 @@
         <button id="glamourBtn">Look up glamour</button>
       </div>
       <div id="recentGlamour" class="recent-strip hidden"></div>
+    </div>
+
+    <div class="panel">
+      <p class="recipe-meta" style="margin-top:0;">Favorite glamours — save the ones you want to come back to, without losing them to a "Recent" list that scrolls away.</p>
+      <div id="glamourFavoritesList" class="recent-strip hidden"></div>
+      <div class="row">
+        <button id="glamourFavExportBtn" class="secondary">Export favorites</button>
+        <button id="glamourFavImportBtn" class="secondary">Import favorites</button>
+        <input type="file" id="glamourFavImportFile" accept="application/json,.json" class="hidden">
+        <span id="glamourFavImportConfirm" class="copy-confirm hidden">Imported.</span>
+      </div>
+      <p class="recipe-meta" style="margin-bottom:0;">Favorites only live in this browser — clearing cookies/site data wipes them. Export a backup now and then, or before switching browsers.</p>
     </div>
 
     <div id="glamourFriendlyStatus" class="friendly-status hidden">
@@ -902,6 +922,53 @@ function summarizeAcquisition(item){
   return tags;
 }
 
+// The wiki's own "Acquisition → Purchase" line for a Mog Station item reads
+// like: "Final Fantasy XIV Online Store - ($18 / ...) - Actual Bundle Name" —
+// two links, where the first just explains what the Online Store is and the
+// LAST one is the actual product/bundle being sold. The generic store link
+// isn't very useful on its own; this pulls out that last link so the tag can
+// point straight at the thing you'd actually go buy.
+function extractOnlineStorePurchaseLink(html){
+  if (!html) return null;
+  const idx = html.search(/Final_Fantasy_XIV_Online_Store/i);
+  if (idx === -1) return null;
+  const windowStart = Math.max(0, idx - 200);
+  const windowEnd = Math.min(html.length, idx + 1500);
+  const chunk = html.slice(windowStart, windowEnd);
+  const idxInChunk = idx - windowStart;
+  // Try to stop at the end of the enclosing list item/row/paragraph so a link
+  // from the NEXT purchase line doesn't get pulled in by mistake.
+  const closeMatch = chunk.slice(idxInChunk).match(/<\/(li|tr|dd|p)>/i);
+  const scoped = closeMatch ? chunk.slice(0, idxInChunk + closeMatch.index + closeMatch[0].length) : chunk;
+
+  const anchorRe = /<a\s+[^>]*?href\s*=\s*(["'])([^"']+)\1[^>]*>([\s\S]*?)<\/a>/gi;
+  let last = null, m;
+  while ((m = anchorRe.exec(scoped))){ last = m; }
+  if (!last) return null;
+  const url = last[2];
+  if (/Final_Fantasy_XIV_Online_Store/i.test(url)) return null; // no distinct product link found, just the store link itself
+  let name = last[3].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  name = decodeHtmlEntities(name);
+  if (!name) return null;
+  const fullUrl = /^https?:\/\//i.test(url) ? url : ('https://ffxiv.consolegameswiki.com' + (url.startsWith('/') ? url : ('/' + url)));
+  return { name, url: fullUrl };
+}
+
+// Swaps the generic "Online Store (Mog Station)" tag's link for the actual
+// bundle/product page when the wiki HTML is available (it's a per-page
+// scrape, not something Garland's JSON exposes) — keeps the "— $18" price
+// suffix either way.
+function refineOnlineStoreTag(tags, wikiHtml){
+  const idx = tags.findIndex(t => t.text && t.text.indexOf('Online Store (Mog Station)') === 0);
+  if (idx === -1) return tags;
+  const link = extractOnlineStorePurchaseLink(wikiHtml);
+  if (!link) return tags;
+  const priceSuffix = tags[idx].text.slice('Online Store (Mog Station)'.length);
+  const next = tags.slice();
+  next[idx] = { text: 'Online Store: ' + link.name + priceSuffix, url: link.url };
+  return next;
+}
+
 function extractGarlandId(html){
   const m = html.match(/garlandtools\.org\/db\/#item\/(\d+)/);
   return m ? m[1] : null;
@@ -952,6 +1019,26 @@ function extractEorzeaGear(html){
     if (name && !seen.has(name)){
       seen.add(name);
       results.push({ name, lodestoneUrl: url });
+    }
+  }
+  return results;
+}
+
+// Eorzea Collection glamour pages embed the glamour's own screenshots (a
+// cover shot plus whatever else was uploaded) straight from their own image
+// CDN — these are plain <img> tags, not something that needs a CORS-proof
+// fetch, so the browser can just load them directly. The page repeats each
+// image at least twice (a big view and a thumbnail), hence the dedupe.
+function extractEorzeaScreenshots(html){
+  const results = [];
+  const seen = new Set();
+  const imgRe = /<img\s+[^>]*?src\s*=\s*(["'])(https:\/\/glamours\.eorzeacollection\.com\/[^"']+)\1[^>]*>/gi;
+  let m;
+  while ((m = imgRe.exec(html))){
+    const url = m[2];
+    if (!seen.has(url)){
+      seen.add(url);
+      results.push(url);
     }
   }
   return results;
@@ -1720,7 +1807,7 @@ async function lookupItem(){
     lookupUI.setStage('recipe');
     const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json', lookupUI.log);
     itemData.item.__partials = itemData.partials || [];
-    renderItemLookup(itemData.item);
+    renderItemLookup(itemData.item, html);
     lookupUI.log('Done.');
     addRecent('lycaas_recent_lookup', { name: itemData.item.name, url: pageUrl });
     renderRecent('lycaas_recent_lookup', 'recentLookup', item => {
@@ -1746,8 +1833,8 @@ function renderAcqTags(tags){
   ).join('');
 }
 
-function renderItemLookup(item){
-  const tags = summarizeAcquisition(item);
+function renderItemLookup(item, wikiHtml){
+  const tags = refineOnlineStoreTag(summarizeAcquisition(item), wikiHtml);
   const wikiLink = wikiUrlForName(item.name);
   const universalisPart = item.tradeable
     ? (' &nbsp;·&nbsp; <a href="https://universalis.app/market/' + item.id + '" target="_blank" rel="noopener">Check on Universalis →</a>')
@@ -1790,6 +1877,7 @@ async function lookupGlamour(){
       throw friendlyError('Couldn\'t find any equipped items on that page — make sure it\'s an actual glamour page (not a gearset, profile, or listing page).');
     }
     glamourUI.log('Found ' + pieces.length + ' piece(s): ' + pieces.map(p=>p.name).join(', '));
+    const screenshots = extractEorzeaScreenshots(html);
 
     glamourUI.setStage('glamour');
     glamourUI.log('Resolving each piece on the wiki...');
@@ -1817,16 +1905,17 @@ async function lookupGlamour(){
           gtId,
           tradeable: !!item.tradeable,
           craftable: !!(item.craft && item.craft.length),
-          tags: summarizeAcquisition(item)
+          tags: refineOnlineStoreTag(summarizeAcquisition(item), wHtml)
         };
       }catch(e){
         return { name: piece.name, resolveFailed: true };
       }
     }));
 
-    renderGlamour(resolved);
+    const glamourName = (pageUrl.split('/').filter(Boolean).pop() || 'Glamour').replace(/-/g,' ');
+    renderGlamour(resolved, screenshots, { url: pageUrl, name: glamourName });
     glamourUI.log('Done.');
-    addRecent('lycaas_recent_glamour', { name: (pageUrl.split('/').filter(Boolean).pop() || 'Glamour').replace(/-/g,' '), url: pageUrl });
+    addRecent('lycaas_recent_glamour', { name: glamourName, url: pageUrl });
     renderRecent('lycaas_recent_glamour', 'recentGlamour', item => {
       document.getElementById('glamourInput').value = item.url;
       lookupGlamour();
@@ -1840,7 +1929,26 @@ async function lookupGlamour(){
   }
 }
 
-function renderGlamour(items){
+function renderGlamour(items, screenshots, glamourMeta){
+  // Eorzea Collection's own screenshots for this glamour, shown as a small
+  // gallery — plain <img> tags loading straight from their CDN, no fetch needed.
+  const galleryHtml = (screenshots && screenshots.length)
+    ? ('<div class="panel" style="margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap;">'
+        + screenshots.map(src => (
+            '<a href="' + src + '" target="_blank" rel="noopener">'
+            + '<img src="' + src + '" alt="Glamour screenshot" style="max-width:220px; max-height:220px; border-radius:6px; border:1px solid var(--border); display:block;">'
+            + '</a>'
+          )).join('')
+        + '</div>')
+    : '';
+
+  const favoriteBtnHtml = glamourMeta
+    ? ('<div class="row" style="margin-bottom:10px;">'
+        + '<button id="glamourFavoriteToggleBtn" class="secondary' + (isGlamourFavorited(glamourMeta.url) ? ' active-fav' : '') + '" data-url="' + glamourMeta.url.replace(/"/g, '&quot;') + '">'
+        + (isGlamourFavorited(glamourMeta.url) ? '★ Favorited' : '☆ Favorite this glamour')
+        + '</button></div>')
+    : '';
+
   const cards = items.map(item => {
     if (item.resolveFailed){
       return `<div class="panel" style="margin-bottom:10px;">
@@ -1865,7 +1973,7 @@ function renderGlamour(items){
     </div>`;
   }).join('');
 
-  document.getElementById('glamourResults').innerHTML = cards;
+  document.getElementById('glamourResults').innerHTML = favoriteBtnHtml + galleryHtml + cards;
   document.querySelectorAll('.price-in-craft-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const name = btn.dataset.name;
@@ -1874,6 +1982,13 @@ function renderGlamour(items){
       lookupRecipe();
     });
   });
+
+  const favBtn = document.getElementById('glamourFavoriteToggleBtn');
+  if (favBtn && glamourMeta){
+    favBtn.addEventListener('click', ()=>{
+      toggleGlamourFavorite({ url: glamourMeta.url, name: glamourMeta.name, screenshot: (screenshots && screenshots[0]) || null });
+    });
+  }
 }
 
 // --- The slave's mood: purely cosmetic, tracked per browser session (resets
@@ -1919,6 +2034,116 @@ function renderRecent(key, containerId, onClick){
   el.querySelectorAll('.recent-chip').forEach(btn=>{
     btn.addEventListener('click', ()=> onClick(list[parseInt(btn.dataset.idx, 10)]));
   });
+}
+
+// --- Glamour favorites: like "Recent," but user-curated and never
+// auto-evicted — a separate localStorage list so people can build a real
+// collection of glamour pages to revisit, with export/import so it survives
+// clearing cookies (same backup pattern used for the Watchlist below). ---
+function loadGlamourFavorites(){
+  try{ return JSON.parse(localStorage.getItem('lycaas_glamour_favorites') || '[]'); }
+  catch(e){ return []; }
+}
+function saveGlamourFavorites(list){
+  localStorage.setItem('lycaas_glamour_favorites', JSON.stringify(list));
+}
+function isGlamourFavorited(url){
+  return loadGlamourFavorites().some(f => f.url === url);
+}
+function toggleGlamourFavorite(meta){
+  const list = loadGlamourFavorites();
+  const idx = list.findIndex(f => f.url === meta.url);
+  if (idx === -1){
+    list.unshift({ url: meta.url, name: meta.name, screenshot: meta.screenshot || null, savedAt: new Date().toISOString() });
+  } else {
+    list.splice(idx, 1);
+  }
+  saveGlamourFavorites(list);
+  renderGlamourFavorites();
+  updateGlamourFavoriteBtn(meta.url);
+}
+function removeGlamourFavorite(url){
+  const list = loadGlamourFavorites().filter(f => f.url !== url);
+  saveGlamourFavorites(list);
+  renderGlamourFavorites();
+  updateGlamourFavoriteBtn(url);
+}
+function renderGlamourFavorites(){
+  const list = loadGlamourFavorites();
+  const el = document.getElementById('glamourFavoritesList');
+  if (!list.length){ el.innerHTML = ''; el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  el.innerHTML = '<span class="recent-label">Favorites:</span> ' +
+    list.map((item, idx) => (
+      '<span class="fav-chip-wrap">'
+      + '<button class="recent-chip" data-fav-idx="' + idx + '">'
+      + (item.screenshot ? ('<img src="' + item.screenshot + '" alt="" class="fav-thumb">') : '')
+      + item.name + '</button>'
+      + '<button class="fav-remove" data-fav-remove-idx="' + idx + '" title="Remove favorite">✕</button>'
+      + '</span>'
+    )).join('');
+  el.querySelectorAll('[data-fav-idx]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const item = list[parseInt(btn.dataset.favIdx, 10)];
+      document.getElementById('glamourInput').value = item.url;
+      lookupGlamour();
+    });
+  });
+  el.querySelectorAll('[data-fav-remove-idx]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const item = list[parseInt(btn.dataset.favRemoveIdx, 10)];
+      removeGlamourFavorite(item.url);
+    });
+  });
+}
+// Keeps the in-page "☆ Favorite this glamour" toggle in sync after a
+// favorite/remove action, without needing a full re-render of the results.
+function updateGlamourFavoriteBtn(url){
+  const btn = document.getElementById('glamourFavoriteToggleBtn');
+  if (!btn || btn.dataset.url !== url) return;
+  const favorited = isGlamourFavorited(url);
+  btn.textContent = favorited ? '★ Favorited' : '☆ Favorite this glamour';
+  btn.classList.toggle('active-fav', favorited);
+}
+function exportGlamourFavorites(){
+  const list = loadGlamourFavorites();
+  if (!list.length){ alert('No favorite glamours yet — nothing to export.'); return; }
+  const payload = {
+    exportedFrom: 'Lycaa\'s Slave',
+    exportedAt: new Date().toISOString(),
+    glamourFavorites: list
+  };
+  downloadTextFile('lycaas-glamour-favorites.json', JSON.stringify(payload, null, 2), 'application/json');
+}
+function importGlamourFavoritesFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      const incoming = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.glamourFavorites) ? parsed.glamourFavorites : null);
+      if (!incoming) throw new Error('not a recognizable glamour favorites file');
+      const current = loadGlamourFavorites();
+      const currentUrls = new Set(current.map(f => f.url));
+      let added = 0;
+      incoming.forEach(f => {
+        if (!f || !f.url || !f.name) return;
+        if (currentUrls.has(f.url)) return;
+        current.push({ url: f.url, name: f.name, screenshot: f.screenshot || null, savedAt: f.savedAt || new Date().toISOString() });
+        currentUrls.add(f.url);
+        added++;
+      });
+      saveGlamourFavorites(current);
+      renderGlamourFavorites();
+      const c = document.getElementById('glamourFavImportConfirm');
+      c.textContent = added ? ('Imported ' + added + ' favorite(s).') : 'Nothing new to import — already had all of those.';
+      c.classList.remove('hidden');
+      setTimeout(()=>c.classList.add('hidden'), 3500);
+    }catch(e){
+      alert('That doesn\'t look like a glamour favorites export file (' + e.message + ').');
+    }
+  };
+  reader.readAsText(file);
 }
 
 // --- Basket: a running list of "please craft me this" requests, kept in
@@ -2645,6 +2870,15 @@ renderRecent('lycaas_recent_glamour', 'recentGlamour', item => {
   document.getElementById('glamourInput').value = item.url;
   lookupGlamour();
 });
+
+document.getElementById('glamourFavExportBtn').addEventListener('click', exportGlamourFavorites);
+document.getElementById('glamourFavImportBtn').addEventListener('click', ()=>document.getElementById('glamourFavImportFile').click());
+document.getElementById('glamourFavImportFile').addEventListener('change', (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if (file) importGlamourFavoritesFile(file);
+  e.target.value = '';
+});
+renderGlamourFavorites();
 
 (function restoreMood(){
   const n = parseInt(sessionStorage.getItem('lycaas_search_count') || '0', 10);
