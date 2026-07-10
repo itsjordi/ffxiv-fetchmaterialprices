@@ -1029,10 +1029,17 @@ function extractEorzeaGear(html){
 // CDN — these are plain <img> tags, not something that needs a CORS-proof
 // fetch, so the browser can just load them directly. The page repeats each
 // image at least twice (a big view and a thumbnail), hence the dedupe.
-function extractEorzeaScreenshots(html){
+function extractEorzeaScreenshots(html, glamourId){
   const results = [];
   const seen = new Set();
-  const imgRe = /<img\s+[^>]*?src\s*=\s*(["'])(https:\/\/glamours\.eorzeacollection\.com\/[^"']+)\1[^>]*>/gi;
+  // Every glamour's own screenshots are hosted at .../{glamourId}/filename —
+  // but the page also has a "More Glamours by <author>" carousel further
+  // down with its OWN thumbnails, hosted under THEIR OWN glamour ids on the
+  // same CDN domain. Scoping the match to this glamour's specific id (pulled
+  // from the page URL, not a guessed CSS class) is what keeps those out —
+  // no need to know or trust any particular section's class name.
+  const idSegment = glamourId ? ('\\/' + glamourId + '\\/') : '\\/';
+  const imgRe = new RegExp('<img\\s+[^>]*?src\\s*=\\s*(["\'])(https://glamours\\.eorzeacollection\\.com' + idSegment + '[^"\']+)\\1[^>]*>', 'gi');
   let m;
   while ((m = imgRe.exec(html))){
     const url = m[2];
@@ -1877,7 +1884,8 @@ async function lookupGlamour(){
       throw friendlyError('Couldn\'t find any equipped items on that page — make sure it\'s an actual glamour page (not a gearset, profile, or listing page).');
     }
     glamourUI.log('Found ' + pieces.length + ' piece(s): ' + pieces.map(p=>p.name).join(', '));
-    const screenshots = extractEorzeaScreenshots(html);
+    const glamourIdMatch = pageUrl.match(/\/glamour\/(\d+)\//);
+    const screenshots = extractEorzeaScreenshots(html, glamourIdMatch ? glamourIdMatch[1] : null);
 
     glamourUI.setStage('glamour');
     glamourUI.log('Resolving each piece on the wiki...');
