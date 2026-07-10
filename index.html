@@ -132,6 +132,12 @@
     font-size:.75rem; padding:3px 9px; border-radius:12px; font-style:italic;
   }
   .acq-link{font-size:.78rem;}
+  .outlier-tag{
+    display:inline-block; background:var(--paper); border:1px solid var(--bad); color:var(--bad);
+    font-size:.72rem; padding:1px 7px; border-radius:10px; font-style:italic; margin-left:4px; cursor:help;
+  }
+  .mini-table{margin:8px 0 0; font-size:.82rem;}
+  .mini-table th, .mini-table td{padding:6px 8px;}
 
   .lookup-result{margin-top:4px;}
   .lookup-result h3{margin:0 0 4px;}
@@ -227,9 +233,9 @@
     <details class="panel" id="tutorial" open>
       <summary>How this works (tap to collapse)</summary>
       <ol>
-        <li>Go to the FFXIV wiki and find the item or piece of gear you want to craft.</li>
-        <li>Copy that page's URL and paste it in the box below.</li>
-        <li>Click <b>"Look up recipe"</b> — the slave reads the page, finds the recipe, and prices every ingredient on the <b>Light</b> data center automatically. No extra button to click.</li>
+        <li>Think of the item or piece of gear you want to craft.</li>
+        <li>Type its name, or paste its FFXIV wiki page URL, in the box below.</li>
+        <li>Click <b>"Look up recipe"</b> — the slave finds the page, finds the recipe, and prices every ingredient on the <b>Light</b> data center automatically. No extra button to click.</li>
         <li>Click any ingredient's name in the results to see how it's actually obtained (gathered, bought, desynthed, etc) — and whether it's cheaper to craft it yourself.</li>
         <li>If the item can be crafted more than one way, switching the recipe dropdown re-prices it automatically too.</li>
       </ol>
@@ -237,10 +243,11 @@
     </details>
 
     <div class="panel">
+      <p class="recipe-meta" style="margin-top:0;">Type the item's name (e.g. <i>Augmented Zelotupia</i>), or paste its wiki link directly.</p>
       <div class="row">
         <div class="field">
-          <label for="wikiUrl">Wiki page URL</label>
-          <input type="text" id="wikiUrl" placeholder="https://ffxiv.consolegameswiki.com/wiki/AR-Caean_Velvet_Top_of_Striking">
+          <label for="wikiUrl">Item name or wiki URL</label>
+          <input type="text" id="wikiUrl" placeholder="Augmented Zelotupia">
         </div>
       </div>
       <div class="row">
@@ -576,7 +583,7 @@ let currentIngredients = null; // resolved ingredient list for the chosen recipe
 
 async function lookupRecipe(){
   const urlInput = document.getElementById('wikiUrl').value.trim();
-  if (!urlInput){ alert('Paste a wiki page URL first.'); return; }
+  if (!urlInput){ alert('Type an item name or paste a wiki page URL first.'); return; }
   document.getElementById('itemInfo').classList.add('hidden');
   document.getElementById('results').innerHTML = '';
   craftUI.hideError();
@@ -585,15 +592,19 @@ async function lookupRecipe(){
   btn.disabled = true;
   try{
     let pageUrl;
-    try{ pageUrl = new URL(urlInput).toString(); }
-    catch(e){ throw new Error('That doesn\'t look like a valid URL.'); }
+    if (/^https?:\/\//i.test(urlInput)){
+      try{ pageUrl = new URL(urlInput).toString(); }
+      catch(e){ throw new Error('That doesn\'t look like a valid URL.'); }
+    } else {
+      pageUrl = wikiUrlForName(urlInput);
+    }
 
     craftUI.setStage('wiki');
     craftUI.log('Fetching wiki page...');
     const html = await fetchHtml(pageUrl, craftUI.log);
 
     const gtId = extractGarlandId(html);
-    if (!gtId) throw new Error('Could not find a market/item link on this page. Make sure it\'s an item page on ffxiv.consolegameswiki.com.');
+    if (!gtId) throw new Error('Could not find a market/item link on that page. Try the exact wiki spelling, or paste the full wiki URL instead.');
     craftUI.log('Found item ID ' + gtId + '. Fetching recipe data from Garland Tools...');
 
     craftUI.setStage('recipe');
@@ -669,20 +680,83 @@ async function resolveIngredients(recipe){
   }));
 }
 
-// Cost to craft ONE unit of an ingredient from its own sub-ingredients, using
-// whatever prices we already fetched. Returns null if any required
-// sub-ingredient can't be priced (so the comparison can't be made honestly).
+function median(arr){
+  if (!arr || arr.length === 0) return 0;
+  const sorted = arr.slice().sort((a,b)=>a-b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid-1] + sorted[mid]) / 2;
+}
+
+// Picks a realistic price for buying `neededQty` units of something, instead of
+// just multiplying the single cheapest listing's unit price by the quantity —
+// that's a lie the moment that cheap listing doesn't have enough stock. Walks
+// listings cheapest-first, filling the order from each one's actual stock, and
+// extrapolates with the priciest listing we saw if supply runs short. Also
+// flags when the cheapest listing looks like a one-off fluke: a listing of
+// just a unit or two priced far below everything else on the board.
+function priceForQuantity(priceEntry, neededQty){
+  if (!priceEntry || !priceEntry.listings || priceEntry.listings.length === 0) return null;
+  const sorted = priceEntry.listings.slice().sort((a,b)=>a.pricePerUnit - b.pricePerUnit);
+  const cheapest = sorted[0];
+
+  let outlier = false;
+  let typicalPrice = null;
+  if (sorted.length > 1){
+    typicalPrice = median(sorted.slice(1).map(l=>l.pricePerUnit));
+    const qty = cheapest.quantity || 1;
+    if (qty <= 2 && typicalPrice > 0 && cheapest.pricePerUnit < typicalPrice * 0.5){
+      outlier = true;
+    }
+  }
+
+  let remaining = neededQty;
+  let total = 0;
+  for (const listing of sorted){
+    if (remaining <= 0) break;
+    const take = Math.min(remaining, listing.quantity || 1);
+    total += take * listing.pricePerUnit;
+    remaining -= take;
+  }
+  if (remaining > 0){
+    // Ran out of listed stock — extrapolate the rest at the priciest listing seen,
+    // which is a more honest guess than assuming infinite stock at the cheapest price.
+    total += remaining * sorted[sorted.length - 1].pricePerUnit;
+  }
+
+  return {
+    unit: cheapest.pricePerUnit,
+    worldName: cheapest.worldName,
+    hq: cheapest.hq,
+    total,
+    outlier,
+    typicalPrice
+  };
+}
+
+// Cost to craft the amount of an ingredient the recipe actually calls for,
+// from its own sub-ingredients, using whatever prices we already fetched.
+// Returns null if any required sub-ingredient can't be priced (so the
+// comparison can't be made honestly), otherwise {total, breakdown:[...]}
+// with one breakdown row per sub-ingredient for the itemized table.
 function computeCraftCost(ing, priceResult){
   if (!ing.subIngredients) return null;
   let total = 0;
+  const breakdown = [];
   for (const sub of ing.subIngredients){
     if (sub.resolveFailed || !sub.tradeable) return null;
     if (priceResult.unresolved.includes(sub.id) || priceResult.unresolved.includes(String(sub.id)) || !priceResult.items[sub.id]) return null;
-    const listing = cheapestListing(priceResult.items[sub.id]);
-    if (!listing) return null;
-    total += listing.pricePerUnit * sub.amount;
+    // Sub-ingredient amount is "per unit of ing" — scale by how many units of
+    // ing the recipe actually needs.
+    const neededTotal = sub.amount * ing.amount;
+    const priced = priceForQuantity(priceResult.items[sub.id], neededTotal);
+    if (!priced) return null;
+    total += priced.total;
+    breakdown.push({
+      name: sub.name, amount: neededTotal, unit: priced.unit,
+      subtotal: priced.total, outlier: priced.outlier
+    });
   }
-  return total;
+  return { total, breakdown };
 }
 
 async function fetchPrices(world, ids, logFn){
@@ -692,12 +766,6 @@ async function fetchPrices(world, ids, logFn){
   if (data.items) return {items:data.items, unresolved:data.unresolvedItems || []};
   if (data.itemID) return {items:{[data.itemID]:data}, unresolved:[]};
   return {items:{}, unresolved: ids};
-}
-
-function cheapestListing(priceEntry){
-  if (!priceEntry || !priceEntry.listings || priceEntry.listings.length === 0) return null;
-  const sorted = priceEntry.listings.slice().sort((a,b)=>a.pricePerUnit - b.pricePerUnit);
-  return sorted[0];
 }
 
 function fmt(n){ return n.toLocaleString('en-US'); }
@@ -753,17 +821,19 @@ async function getPrices(){
       if (priceResult.unresolved.includes(ing.id) || priceResult.unresolved.includes(String(ing.id)) || !priceResult.items[ing.id]){
         return {...base, status:'prohibited', unit:null, subtotal:0};
       }
-      const listing = cheapestListing(priceResult.items[ing.id]);
-      if (!listing){
+      const priced = priceForQuantity(priceResult.items[ing.id], ing.amount);
+      if (!priced){
         return {...base, status:'nolistings', unit:null, subtotal:0};
       }
       return {
         ...base,
         status:'ok',
-        unit: listing.pricePerUnit,
-        listingWorld: listing.worldName,
-        hq: listing.hq,
-        subtotal: listing.pricePerUnit * ing.amount
+        unit: priced.unit,
+        listingWorld: priced.worldName,
+        hq: priced.hq,
+        subtotal: priced.total,
+        outlier: priced.outlier,
+        typicalPrice: priced.typicalPrice
       };
     });
 
@@ -784,9 +854,20 @@ function renderAcquisitionDetail(row){
   }
   const tags = summarizeAcquisition(row.raw);
   const wikiLink = wikiUrlForName(row.name);
+
+  let outlierHtml = '';
+  if (row.status === 'ok' && row.outlier){
+    outlierHtml = '<p class="recipe-meta" style="margin:0 0 8px; color:var(--bad);">'
+      + '⚠ The cheapest listing (' + fmt(row.unit) + 'g) looks like a one-off fluke — only a unit or two of it, '
+      + 'while the rest of the board sits around ' + fmt(Math.round(row.typicalPrice)) + 'g. '
+      + 'The total above already fills the order from pricier listings once that cheap stock runs out, '
+      + 'so don\'t expect to actually land all ' + row.amount + ' at the bargain price.'
+      + '</p>';
+  }
+
   let compareHtml = '';
-  if (row.craftCost != null){
-    const craftTotal = row.craftCost * row.amount;
+  if (row.craftCost){
+    const craftTotal = row.craftCost.total;
     if (row.status === 'ok'){
       const cheaperToCraft = craftTotal < row.subtotal;
       compareHtml = '<p class="recipe-meta" style="margin:8px 0 0;">'
@@ -801,11 +882,23 @@ function renderAcquisitionDetail(row){
         + 'but you could craft it yourself (' + row.subJobName + ') for roughly ~' + fmt(craftTotal) + 'g in raw materials for '
         + row.amount + '.</p>';
     }
+    compareHtml += '<table class="mini-table"><thead><tr>'
+      + '<th>Sub-ingredient</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Subtotal</th>'
+      + '</tr></thead><tbody>'
+      + row.craftCost.breakdown.map(b => (
+          '<tr><td>' + b.name + (b.outlier ? ' <span class="outlier-tag" title="Cheapest listing looks like a fluke — only a unit or two at that price.">⚠</span>' : '') + '</td>'
+          + '<td class="num">' + b.amount + '</td>'
+          + '<td class="num">' + fmt(b.unit) + 'g</td>'
+          + '<td class="num">' + fmt(b.subtotal) + 'g</td></tr>'
+        )).join('')
+      + '</tbody></table>';
   }
+
   const universalisPart = row.tradeable
     ? (' &nbsp;·&nbsp; <a href="https://universalis.app/market/' + row.id + '" target="_blank" rel="noopener">Check on Universalis →</a>')
     : '';
   return '<div class="acq-tags">' + tags.map(t=>'<span class="acq-tag">'+t+'</span>').join('') + '</div>'
+    + outlierHtml
     + compareHtml
     + '<p class="acq-link" style="margin:6px 0 0;">'
     + '<a href="' + wikiLink + '" target="_blank" rel="noopener">View on wiki →</a>'
@@ -844,10 +937,13 @@ function renderResults(itemName, recipe, world, rows){
       </tr>`;
     } else {
       total += r.subtotal;
+      const outlierBadge = r.outlier
+        ? '<span class="outlier-tag" title="Only a unit or two listed at this price — the rest of the board is pricier. Click the name for details.">⚠ fluke?</span>'
+        : '';
       row = `<tr>
         <td>${nameCell}</td>
         <td class="num">${r.amount}</td>
-        <td class="num">${fmt(r.unit)}g ${r.hq ? '(HQ)' : ''}</td>
+        <td class="num">${fmt(r.unit)}g ${r.hq ? '(HQ)' : ''} ${outlierBadge}</td>
         <td class="world-tag">${r.listingWorld}</td>
         <td class="num">${fmt(r.subtotal)}g</td>
       </tr>`;
