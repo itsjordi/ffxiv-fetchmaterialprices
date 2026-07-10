@@ -268,11 +268,11 @@
 
   <div class="tabs">
     <button class="tab-btn active" id="tabBtnCraft">Craft Cost</button>
+    <button class="tab-btn" id="tabBtnGlamour">Glamour</button>
     <button class="tab-btn" id="tabBtnLookup">Item Lookup</button>
     <button class="tab-btn" id="tabBtnShopping">Shopping List</button>
     <button class="tab-btn" id="tabBtnProfit">Profit Calc</button>
     <button class="tab-btn" id="tabBtnWatch">Watchlist</button>
-    <button class="tab-btn" id="tabBtnGlamour">Glamour</button>
   </div>
 
   <div id="tabCraft" class="tab-panel">
@@ -891,6 +891,12 @@ function summarizeAcquisition(item){
   if (item.tradeShops && item.tradeShops.length){
     const shops = [...new Set(item.tradeShops.map(s=>s.shop).filter(Boolean))];
     tag(shops.length ? ('Special Shop (' + shops.join(', ') + ')') : 'Special Shop');
+  }
+  // Garland marks cash-shop items with a "mog" field (Mog Station price/id) —
+  // and separately, some list "MOGSTATION" in an "alla.source" array — either
+  // one means real gil can't get you this, only the FFXIV Online Store can.
+  if (item.mog || (item.alla && item.alla.source && item.alla.source.includes('MOGSTATION'))){
+    tag('Online Store (Mog Station)' + (item.mog && item.mog.price ? (' — $' + item.mog.price) : ''), 'https://ffxiv.consolegameswiki.com/wiki/Final_Fantasy_XIV_Online_Store');
   }
   if (!tags.length) tag('Source unclear — check the wiki link below');
   return tags;
