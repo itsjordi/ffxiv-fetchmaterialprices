@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lycaa's Slave</title>
+<style>
+  :root{
+    --bg:#e8dcc0; --paper:#f6efdc; --panel:#faf4e4; --panel2:#f0e6cc;
+    --ink:#3a2f22; --dim:#7a6b53; --good:#4a6741; --bad:#8c3a2b;
+    --border:#cdbb92; --accent:#8c3a2b; --accent-dim:#6b2c20;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:Georgia,"Iowan Old Style","Palatino Linotype",Palatino,serif;
+    color:var(--ink); min-height:100vh; padding:32px 16px;
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(ellipse at top left, rgba(255,255,255,.25), transparent 60%),
+      repeating-linear-gradient(0deg, rgba(120,100,60,.035) 0px, rgba(120,100,60,.035) 1px, transparent 1px, transparent 3px),
+      repeating-linear-gradient(90deg, rgba(120,100,60,.02) 0px, rgba(120,100,60,.02) 1px, transparent 1px, transparent 3px);
+  }
+  .app{max-width:820px; margin:0 auto;}
+  h1{
+    font-size:2rem; margin:0 0 2px; color:var(--accent); letter-spacing:.5px; font-weight:700;
+    text-shadow:0 1px 0 rgba(255,255,255,.4);
+  }
+  .sub{color:var(--dim); font-size:.9rem; margin:0 0 24px; line-height:1.5; font-style:italic;}
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:2px; padding:18px 20px; margin-bottom:16px;
+    box-shadow:0 1px 3px rgba(58,47,34,.15), 0 0 0 1px rgba(255,255,255,.3) inset;
+  }
+  .row{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;}
+  .row > input{flex:1; min-width:220px;}
+  input[type=text], input{
+    background:var(--paper); border:1px solid var(--border); color:var(--ink);
+    padding:10px 12px; border-radius:2px; font-size:.95rem; font-family:inherit;
+  }
+  input:focus{outline:none; border-color:var(--accent-dim);}
+  select{
+    background:var(--paper); border:1px solid var(--border); color:var(--ink);
+    padding:10px 12px; border-radius:2px; font-size:.95rem; width:100%; font-family:inherit;
+  }
+  button{
+    background:linear-gradient(180deg,#a1483a,#7d3226); border:1px solid var(--accent-dim); color:#f6efdc; font-weight:700;
+    padding:10px 18px; border-radius:2px; cursor:pointer; font-size:.9rem; white-space:nowrap;
+    font-family:inherit; letter-spacing:.3px;
+  }
+  button:hover{filter:brightness(1.08);}
+  button:disabled{opacity:.5; cursor:not-allowed;}
+  label{display:block; font-size:.8rem; color:var(--dim); margin-bottom:6px; font-style:italic;}
+  .field{flex:1; min-width:220px;}
+  .hidden{display:none !important;}
+  #log{
+    background:var(--panel2); border:1px solid var(--border); border-radius:2px; padding:10px 14px;
+    font-family:"Courier New",monospace; font-size:.76rem; color:var(--dim); max-height:160px;
+    overflow-y:auto; white-space:pre-wrap; margin-bottom:16px;
+  }
+  #log:empty{display:none;}
+  .log-err{color:var(--bad);}
+  table{width:100%; border-collapse:collapse; font-size:.92rem;}
+  th, td{text-align:left; padding:10px 8px; border-bottom:1px solid var(--border);}
+  th{color:var(--accent); font-weight:700; font-size:.78rem; text-transform:uppercase; letter-spacing:.5px;}
+  td.num, th.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .prohibited{color:var(--bad); font-style:italic;}
+  .nolistings{color:var(--dim); font-style:italic;}
+  .world-tag{font-size:.75rem; color:var(--dim); font-style:italic;}
+  .total-row td{border-top:2px solid var(--accent-dim); border-bottom:none; font-weight:700; padding-top:14px;}
+  .recipe-meta{color:var(--dim); font-size:.85rem; margin:6px 0 14px; font-style:italic;}
+  .footer-note{font-size:.75rem; color:var(--dim); line-height:1.5; margin-top:24px; text-align:center; font-style:italic;}
+  a{color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Lycaa's Slave</h1>
+  <p class="sub">Fetches material prices, so you know what it'll cost to craft.</p>
+
+  <div class="panel">
+    <div class="row">
+      <div class="field">
+        <label for="wikiUrl">Wiki page URL</label>
+        <input type="text" id="wikiUrl" placeholder="https://ffxiv.consolegameswiki.com/wiki/AR-Caean_Velvet_Top_of_Striking">
+      </div>
+    </div>
+    <div class="row">
+      <button id="lookupBtn">Look up recipe</button>
+    </div>
+  </div>
+
+  <div id="itemInfo" class="panel hidden">
+    <h2 id="itemName" style="margin:0 0 4px; color:var(--ink);"></h2>
+    <div class="recipe-meta" id="recipeMeta"></div>
+    <div class="row" id="recipeRow">
+      <div class="field" style="max-width:320px;">
+        <label for="recipeSelect">Recipe (if more than one job can craft it)</label>
+        <select id="recipeSelect"></select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="world">World or Data Center</label>
+        <input type="text" id="world" list="worldList" placeholder="e.g. Twintania or Light">
+        <datalist id="worldList"></datalist>
+      </div>
+      <button id="priceBtn" style="align-self:flex-end;">Get prices</button>
+    </div>
+  </div>
+
+  <pre id="log"></pre>
+  <div id="results"></div>
+
+  <p class="footer-note">the slave fetches; the slave does not explain itself.</p>
+</div>
+
+<script>
+const JOB_NAMES = {8:'Carpenter',9:'Blacksmith',10:'Armorer',11:'Goldsmith',12:'Leatherworker',13:'Weaver',14:'Alchemist',15:'Culinarian'};
+
+const WORLDS = [
+  'Aether','Adamantoise','Cactuar','Faerie','Gilgamesh','Jenova','Midgardsormr','Sargatanas','Siren',
+  'Crystal','Balmung','Brynhildr','Coeurl','Diabolos','Goblin','Malboro','Mateus','Zalera',
+  'Dynamis','Halicarnassus','Maduin','Marilith','Seraph','Cuchulainn','Golem','Kraken','Rafflesia',
+  'Primal','Behemoth','Excalibur','Exodus','Famfrit','Hyperion','Lamia','Leviathan','Ultros',
+  'Chaos','Cerberus','Louisoix','Moogle','Omega','Phantom','Ragnarok','Sagittarius','Spriggan',
+  'Light','Alpha','Lich','Odin','Phoenix','Raiden','Shiva','Twintania','Zodiark',
+  'Elemental','Aegis','Atomos','Carbuncle','Garuda','Gungnir','Kujata','Tonberry','Typhon',
+  'Gaia','Alexander','Bahamut','Durandal','Fenrir','Ifrit','Ridill','Tiamat','Ultima',
+  'Mana','Anima','Asura','Chocobo','Hades','Ixion','Masamune','Pandaemonium','Titan',
+  'Meteor','Belias','Mandragora','Ramuh','Shinryu','Unicorn','Valefor','Yojimbo','Zeromus',
+  'Materia','Bismarck','Ravana','Sephirot','Sophia','Zurvan'
+];
+document.getElementById('worldList').innerHTML = WORLDS.map(w=>`<option value="${w}">`).join('');
+const lastWorld = localStorage.getItem('ffxiv_last_world');
+if (lastWorld) document.getElementById('world').value = lastWorld;
+
+// Used for JSON APIs (Garland Tools, Universalis) — no "reader" services here since
+// those reformat content and would break JSON.parse.
+const PROXIES_JSON = [
+  {label:'direct',    wrap:u => u},
+  {label:'allorigins',wrap:u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u)},
+  {label:'corsproxy', wrap:u => 'https://corsproxy.io/?url=' + encodeURIComponent(u)},
+  {label:'codetabs',  wrap:u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)},
+];
+// Used for the wiki HTML page — includes Jina's reader service, which fetches with its
+// own crawler and is much less likely to get blocked by the wiki's bot protection than
+// a shared open CORS proxy IP.
+const PROXIES_HTML = [
+  {label:'direct',    wrap:u => u},
+  {label:'jina',      wrap:u => 'https://r.jina.ai/' + u},
+  {label:'allorigins',wrap:u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u)},
+  {label:'corsproxy', wrap:u => 'https://corsproxy.io/?url=' + encodeURIComponent(u)},
+  {label:'codetabs',  wrap:u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)},
+];
+
+function log(msg, isErr){
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  if (isErr) line.className = 'log-err';
+  line.textContent = msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+function clearLog(){ document.getElementById('log').innerHTML = ''; }
+
+async function fetchViaProxies(url, proxies, timeoutMs){
+  timeoutMs = timeoutMs || 15000;
+  const attempts = [];
+  for (const {label, wrap} of proxies){
+    const target = wrap(url);
+    try{
+      const controller = new AbortController();
+      const t = setTimeout(()=>controller.abort(), timeoutMs);
+      const res = await fetch(target, {signal:controller.signal});
+      clearTimeout(t);
+      if (!res.ok){ attempts.push(label + ': HTTP ' + res.status); log('  [' + label + '] HTTP ' + res.status); continue; }
+      const body = await res.text();
+      if (!body || body.trim().length === 0){ attempts.push(label + ': empty response'); log('  [' + label + '] empty response'); continue; }
+      return body;
+    }catch(e){
+      const msg = e.name === 'AbortError' ? 'timed out' : e.message;
+      attempts.push(label + ': ' + msg);
+      log('  [' + label + '] ' + msg);
+    }
+  }
+  throw new Error('every fetch route failed for ' + url + ' — [' + attempts.join(' | ') + ']');
+}
+async function fetchHtml(url, timeoutMs){
+  return fetchViaProxies(url, PROXIES_HTML, timeoutMs);
+}
+async function fetchText(url, timeoutMs){
+  return fetchViaProxies(url, PROXIES_JSON, timeoutMs);
+}
+async function fetchJson(url, timeoutMs){
+  const t = await fetchText(url, timeoutMs);
+  try{ return JSON.parse(t); }
+  catch(e){ throw new Error('Got a non-JSON response from ' + url); }
+}
+
+function extractGarlandId(html){
+  const m = html.match(/garlandtools\.org\/db\/#item\/(\d+)/);
+  return m ? m[1] : null;
+}
+
+let resolvedItem = null; // {name, crafts:[...]}
+let currentIngredients = null; // resolved ingredient list for the chosen recipe
+
+async function lookupRecipe(){
+  const urlInput = document.getElementById('wikiUrl').value.trim();
+  if (!urlInput){ alert('Paste a wiki page URL first.'); return; }
+  document.getElementById('itemInfo').classList.add('hidden');
+  document.getElementById('results').innerHTML = '';
+  clearLog();
+  const btn = document.getElementById('lookupBtn');
+  btn.disabled = true;
+  try{
+    let pageUrl;
+    try{ pageUrl = new URL(urlInput).toString(); }
+    catch(e){ throw new Error('That doesn\'t look like a valid URL.'); }
+
+    log('Fetching wiki page...');
+    const html = await fetchHtml(pageUrl);
+
+    const gtId = extractGarlandId(html);
+    if (!gtId) throw new Error('Could not find a market/item link on this page. Make sure it\'s an item page on ffxiv.consolegameswiki.com.');
+    log('Found item ID ' + gtId + '. Fetching recipe data from Garland Tools...');
+
+    const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json');
+    const name = itemData.item.name;
+    const crafts = itemData.item.craft || [];
+    if (crafts.length === 0){
+      throw new Error('"' + name + '" has no crafting recipe on record (it may be gathered, a drop, or purchased instead, so there are no craft materials to price).');
+    }
+    resolvedItem = {name, gtId, crafts};
+
+    document.getElementById('itemName').textContent = name;
+    const sel = document.getElementById('recipeSelect');
+    sel.innerHTML = crafts.map((c,i)=>{
+      const job = JOB_NAMES[c.job] || ('Job ' + c.job);
+      return `<option value="${i}">${job} &middot; Lv.${c.lvl}</option>`;
+    }).join('');
+    document.getElementById('recipeRow').classList.toggle('hidden', crafts.length <= 1);
+    document.getElementById('recipeMeta').textContent = crafts.length > 1
+      ? ('This item can be crafted ' + crafts.length + ' different ways — pick one below.')
+      : ('Recipe: ' + (JOB_NAMES[crafts[0].job] || crafts[0].job) + ' · Lv.' + crafts[0].lvl);
+    document.getElementById('itemInfo').classList.remove('hidden');
+    log('Ready. Enter a world or data center and click "Get prices".');
+  }catch(e){
+    log('Error: ' + e.message, true);
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+async function resolveIngredients(recipe){
+  const results = [];
+  for (const ing of recipe.ingredients){
+    log('  resolving ingredient ' + ing.id + '...');
+    let data;
+    try{
+      data = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + ing.id + '.json');
+    }catch(e){
+      results.push({id:ing.id, amount:ing.amount, name:'Item ' + ing.id, tradeable:false, resolveFailed:true});
+      continue;
+    }
+    results.push({
+      id: ing.id,
+      amount: ing.amount,
+      name: data.item.name,
+      tradeable: !!data.item.tradeable
+    });
+  }
+  return results;
+}
+
+async function fetchPrices(world, ids){
+  if (ids.length === 0) return {items:{}, unresolved:[]};
+  const url = 'https://universalis.app/api/v2/' + encodeURIComponent(world) + '/' + ids.join(',') + '?listings=20&entries=0';
+  const data = await fetchJson(url);
+  if (data.items) return {items:data.items, unresolved:data.unresolvedItems || []};
+  if (data.itemID) return {items:{[data.itemID]:data}, unresolved:[]};
+  return {items:{}, unresolved: ids};
+}
+
+function cheapestListing(priceEntry){
+  if (!priceEntry || !priceEntry.listings || priceEntry.listings.length === 0) return null;
+  const sorted = priceEntry.listings.slice().sort((a,b)=>a.pricePerUnit - b.pricePerUnit);
+  return sorted[0];
+}
+
+function fmt(n){ return n.toLocaleString('en-US'); }
+
+async function getPrices(){
+  const world = document.getElementById('world').value.trim();
+  if (!world){ alert('Enter a world or data center name.'); return; }
+  if (!resolvedItem){ alert('Look up a recipe first.'); return; }
+  localStorage.setItem('ffxiv_last_world', world);
+
+  const btn = document.getElementById('priceBtn');
+  btn.disabled = true;
+  document.getElementById('results').innerHTML = '';
+  clearLog();
+  try{
+    const recipeIdx = parseInt(document.getElementById('recipeSelect').value || '0', 10);
+    const recipe = resolvedItem.crafts[recipeIdx];
+
+    log('Resolving ' + recipe.ingredients.length + ' ingredient(s)...');
+    currentIngredients = await resolveIngredients(recipe);
+
+    const tradeableIds = currentIngredients.filter(i=>i.tradeable && !i.resolveFailed).map(i=>i.id);
+    log('Fetching live prices for ' + world + '...');
+    let priceResult;
+    try{
+      priceResult = await fetchPrices(world, tradeableIds);
+    }catch(e){
+      throw new Error('Universalis lookup failed — check that "' + world + '" is a valid world or data center name. (' + e.message + ')');
+    }
+
+    const rows = currentIngredients.map(ing=>{
+      if (ing.resolveFailed){
+        return {...ing, status:'prohibited', unit:null, subtotal:0};
+      }
+      if (!ing.tradeable){
+        return {...ing, status:'prohibited', unit:null, subtotal:0};
+      }
+      if (priceResult.unresolved.includes(ing.id) || priceResult.unresolved.includes(String(ing.id)) || !priceResult.items[ing.id]){
+        return {...ing, status:'prohibited', unit:null, subtotal:0};
+      }
+      const listing = cheapestListing(priceResult.items[ing.id]);
+      if (!listing){
+        return {...ing, status:'nolistings', unit:null, subtotal:0};
+      }
+      return {
+        ...ing,
+        status:'ok',
+        unit: listing.pricePerUnit,
+        listingWorld: listing.worldName,
+        hq: listing.hq,
+        subtotal: listing.pricePerUnit * ing.amount
+      };
+    });
+
+    renderResults(resolvedItem.name, recipe, world, rows);
+    log('Done.');
+  }catch(e){
+    log('Error: ' + e.message, true);
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+function renderResults(itemName, recipe, world, rows){
+  const jobName = JOB_NAMES[recipe.job] || ('Job ' + recipe.job);
+  let total = 0;
+  let anyProhibited = false;
+  let anyNoListings = false;
+
+  const bodyRows = rows.map(r=>{
+    if (r.status === 'prohibited'){
+      anyProhibited = true;
+      return `<tr>
+        <td>${r.name}</td>
+        <td class="num">${r.amount}</td>
+        <td colspan="3" class="prohibited">Market prohibited (not sellable on the market board)</td>
+      </tr>`;
+    }
+    if (r.status === 'nolistings'){
+      anyNoListings = true;
+      return `<tr>
+        <td>${r.name}</td>
+        <td class="num">${r.amount}</td>
+        <td colspan="3" class="nolistings">No current listings on ${world}</td>
+      </tr>`;
+    }
+    total += r.subtotal;
+    return `<tr>
+      <td>${r.name}</td>
+      <td class="num">${r.amount}</td>
+      <td class="num">${fmt(r.unit)}g ${r.hq ? '(HQ)' : ''}</td>
+      <td class="world-tag">${r.listingWorld}</td>
+      <td class="num">${fmt(r.subtotal)}g</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('results').innerHTML = `
+    <div class="panel">
+      <h3 style="margin-top:0;">${itemName} <span style="color:var(--dim); font-weight:400; font-size:.85rem;">— ${jobName}, Lv.${recipe.lvl}</span></h3>
+      <table>
+        <thead><tr>
+          <th>Ingredient</th><th class="num">Qty</th><th class="num">Unit price</th><th>Source world</th><th class="num">Subtotal</th>
+        </tr></thead>
+        <tbody>
+          ${bodyRows}
+          <tr class="total-row">
+            <td colspan="4">Total (priceable ingredients only)</td>
+            <td class="num">${fmt(total)}g</td>
+          </tr>
+        </tbody>
+      </table>
+      ${anyProhibited ? '<p class="recipe-meta prohibited">Some ingredients are market prohibited and excluded from the total.</p>' : ''}
+      ${anyNoListings ? '<p class="recipe-meta nolistings">Some ingredients currently have no one selling on ' + world + '.</p>' : ''}
+      <p class="recipe-meta">Prices are the cheapest single listing found on ${world} at lookup time (across all its worlds, if you entered a data center). They change constantly.</p>
+    </div>
+  `;
+}
+
+document.getElementById('lookupBtn').addEventListener('click', lookupRecipe);
+document.getElementById('priceBtn').addEventListener('click', getPrices);
+document.getElementById('wikiUrl').addEventListener('keydown', e=>{ if(e.key==='Enter') lookupRecipe(); });
+document.getElementById('world').addEventListener('keydown', e=>{ if(e.key==='Enter') getPrices(); });
+</script>
+</body>
+</html>
