@@ -214,9 +214,9 @@
       <ol>
         <li>Go to the FFXIV wiki and find the item or piece of gear you want to craft.</li>
         <li>Copy that page's URL and paste it in the box below.</li>
-        <li>Click <b>"Look up recipe"</b> — the slave goes and reads the page for you.</li>
-        <li>Click <b>"Get prices"</b> and wait for the slave to bring back a receipt. It only shops on the <b>Light</b> data center — that's not a setting you can change.</li>
-        <li>Click any ingredient's name in the results to see how it's actually obtained (gathered, bought, desynthed, etc).</li>
+        <li>Click <b>"Look up recipe"</b> — the slave reads the page, finds the recipe, and prices every ingredient on the <b>Light</b> data center automatically. No extra button to click.</li>
+        <li>Click any ingredient's name in the results to see how it's actually obtained (gathered, bought, desynthed, etc) — and whether it's cheaper to craft it yourself.</li>
+        <li>If the item can be crafted more than one way, switching the recipe dropdown re-prices it automatically too.</li>
       </ol>
       <p class="recipe-meta" style="margin-bottom:0;">If it explodes, hit "Copy error for Lycaa" on the error card and send it over.</p>
     </details>
@@ -236,6 +236,7 @@
 
     <div id="itemInfo" class="panel hidden">
       <h2 id="itemName" style="margin:0 0 4px; color:var(--ink);"></h2>
+      <p class="acq-link" id="itemUniversalisLink" style="margin:0 0 8px;"></p>
       <div class="recipe-meta" id="recipeMeta"></div>
       <div class="row" id="recipeRow">
         <div class="field" style="max-width:320px;">
@@ -244,7 +245,7 @@
         </div>
       </div>
       <div class="row">
-        <button id="priceBtn">Get prices (Light data center)</button>
+        <button id="priceBtn" class="secondary">Refresh prices (Light data center)</button>
         <button id="addBasketBtn" class="secondary">Add to basket</button>
       </div>
     </div>
@@ -594,6 +595,8 @@ async function lookupRecipe(){
     resolvedItem = {name, gtId, crafts};
 
     document.getElementById('itemName').textContent = name;
+    document.getElementById('itemUniversalisLink').innerHTML =
+      '<a href="https://universalis.app/market/' + gtId + '" target="_blank" rel="noopener">Check this item on Universalis →</a>';
     const sel = document.getElementById('recipeSelect');
     sel.innerHTML = crafts.map((c,i)=>{
       const job = JOB_NAMES[c.job] || ('Job ' + c.job);
@@ -604,12 +607,13 @@ async function lookupRecipe(){
       ? ('This item can be crafted ' + crafts.length + ' different ways — pick one below.')
       : ('Recipe: ' + (JOB_NAMES[crafts[0].job] || crafts[0].job) + ' · Lv.' + crafts[0].lvl);
     document.getElementById('itemInfo').classList.remove('hidden');
-    craftUI.log('Ready. Click "Get prices" (Light data center).');
     addRecent('lycaas_recent_craft', { name, url: pageUrl });
     renderRecent('lycaas_recent_craft', 'recentCraft', item => {
       document.getElementById('wikiUrl').value = item.url;
       lookupRecipe();
     });
+    // No extra button to click — go straight into pricing on the Light data center.
+    await getPrices();
   }catch(e){
     craftUI.log('Error: ' + e.message, true);
     craftUI.showError(e);
@@ -692,7 +696,9 @@ async function getPrices(){
   btn.disabled = true;
   document.getElementById('results').innerHTML = '';
   craftUI.hideError();
-  craftUI.clearLog();
+  // Note: deliberately not clearing the log here — this runs automatically right
+  // after lookupRecipe(), and wiping its log lines the instant pricing starts
+  // would erase useful context if something's about to go wrong.
   try{
     const recipeIdx = parseInt(document.getElementById('recipeSelect').value || '0', 10);
     const recipe = resolvedItem.crafts[recipeIdx];
@@ -781,9 +787,15 @@ function renderAcquisitionDetail(row){
         + row.amount + '.</p>';
     }
   }
+  const universalisPart = row.tradeable
+    ? (' &nbsp;·&nbsp; <a href="https://universalis.app/market/' + row.id + '" target="_blank" rel="noopener">Check on Universalis →</a>')
+    : '';
   return '<div class="acq-tags">' + tags.map(t=>'<span class="acq-tag">'+t+'</span>').join('') + '</div>'
     + compareHtml
-    + '<p class="acq-link" style="margin:6px 0 0;"><a href="' + wikiLink + '" target="_blank" rel="noopener">View on wiki →</a></p>';
+    + '<p class="acq-link" style="margin:6px 0 0;">'
+    + '<a href="' + wikiLink + '" target="_blank" rel="noopener">View on wiki →</a>'
+    + universalisPart
+    + '</p>';
 }
 
 function renderResults(itemName, recipe, world, rows){
@@ -912,12 +924,15 @@ async function lookupItem(){
 function renderItemLookup(item){
   const tags = summarizeAcquisition(item);
   const wikiLink = wikiUrlForName(item.name);
+  const universalisPart = item.tradeable
+    ? (' &nbsp;·&nbsp; <a href="https://universalis.app/market/' + item.id + '" target="_blank" rel="noopener">Check on Universalis →</a>')
+    : '';
   document.getElementById('lookupResults').innerHTML = `
     <div class="panel lookup-result">
       <h3>${item.name}</h3>
       <p class="recipe-meta">${item.tradeable ? 'Sellable on the market board' : 'Market prohibited — cannot be sold'}${item.ilvl ? (' · Item Level ' + item.ilvl) : ''}</p>
       <div class="acq-tags">${tags.map(t=>'<span class="acq-tag">'+t+'</span>').join('')}</div>
-      <p class="acq-link" style="margin:10px 0 0;"><a href="${wikiLink}" target="_blank" rel="noopener">View on wiki →</a></p>
+      <p class="acq-link" style="margin:10px 0 0;"><a href="${wikiLink}" target="_blank" rel="noopener">View on wiki →</a>${universalisPart}</p>
     </div>
   `;
 }
@@ -1068,6 +1083,7 @@ async function copyBasket(){
 
 document.getElementById('lookupBtn').addEventListener('click', lookupRecipe);
 document.getElementById('priceBtn').addEventListener('click', getPrices);
+document.getElementById('recipeSelect').addEventListener('change', ()=>{ if (resolvedItem) getPrices(); });
 document.getElementById('wikiUrl').addEventListener('keydown', e=>{ if(e.key==='Enter') lookupRecipe(); });
 document.getElementById('addBasketBtn').addEventListener('click', ()=>{
   if (!resolvedItem) return;
