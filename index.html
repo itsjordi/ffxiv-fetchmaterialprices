@@ -143,6 +143,22 @@
   }
   .basket-item:last-child{border-bottom:none;}
   .basket-remove{padding:2px 8px; font-size:.75rem;}
+  .basket-controls{display:flex; align-items:center; gap:6px;}
+  .qty-btn{padding:2px 9px; font-size:.85rem; line-height:1;}
+  .basket-qty{min-width:1.4em; text-align:center; font-variant-numeric:tabular-nums;}
+  #basketTotal{color:var(--dim); font-weight:400; font-style:italic;}
+
+  .recent-strip{
+    margin-top:12px; padding-top:10px; border-top:1px dashed var(--border);
+    display:flex; flex-wrap:wrap; align-items:center; gap:6px;
+  }
+  .recent-label{font-size:.78rem; color:var(--dim); font-style:italic; margin-right:2px;}
+  .recent-chip{
+    background:var(--paper); border:1px solid var(--border); color:var(--ink);
+    font-family:inherit; font-size:.78rem; padding:4px 11px; border-radius:12px;
+    cursor:pointer; font-style:italic;
+  }
+  .recent-chip:hover{border-color:var(--accent-dim); color:var(--accent);}
 </style>
 </head>
 <body>
@@ -174,7 +190,7 @@
 
   <div class="panel" id="basketBar">
     <div class="row" style="align-items:center; margin-bottom:0;">
-      <button id="basketToggleBtn" class="secondary">🧺 Basket (<span id="basketCount">0</span>)</button>
+      <button id="basketToggleBtn" class="secondary">🧺 Basket (<span id="basketCount">0</span>) <span id="basketTotal"></span></button>
       <span class="recipe-meta" style="margin:0; flex:1;">Add things you want made, then copy the list for Lycaa.</span>
     </div>
     <div id="basketPanel" class="hidden" style="margin-top:12px;">
@@ -215,6 +231,7 @@
       <div class="row">
         <button id="lookupBtn">Look up recipe</button>
       </div>
+      <div id="recentCraft" class="recent-strip hidden"></div>
     </div>
 
     <div id="itemInfo" class="panel hidden">
@@ -268,6 +285,7 @@
       <div class="row">
         <button id="lookupItemBtn">Look it up</button>
       </div>
+      <div id="recentLookup" class="recent-strip hidden"></div>
     </div>
 
     <div id="lookupFriendlyStatus" class="friendly-status hidden">
@@ -294,7 +312,7 @@
     <div id="lookupResults"></div>
   </div>
 
-  <p class="footer-note">the slave fetches; the slave does not explain itself.</p>
+  <p class="footer-note" id="footerNote">the slave fetches; the slave does not explain itself.</p>
 </div>
 
 <script>
@@ -587,6 +605,11 @@ async function lookupRecipe(){
       : ('Recipe: ' + (JOB_NAMES[crafts[0].job] || crafts[0].job) + ' · Lv.' + crafts[0].lvl);
     document.getElementById('itemInfo').classList.remove('hidden');
     craftUI.log('Ready. Click "Get prices" (Light data center).');
+    addRecent('lycaas_recent_craft', { name, url: pageUrl });
+    renderRecent('lycaas_recent_craft', 'recentCraft', item => {
+      document.getElementById('wikiUrl').value = item.url;
+      lookupRecipe();
+    });
   }catch(e){
     craftUI.log('Error: ' + e.message, true);
     craftUI.showError(e);
@@ -601,11 +624,46 @@ async function resolveIngredients(recipe){
     craftUI.log('  resolving ingredient ' + ing.id + '...');
     try{
       const data = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + ing.id + '.json', craftUI.log);
-      return { id: ing.id, amount: ing.amount, name: data.item.name, tradeable: !!data.item.tradeable, raw: data.item };
+      const item = data.item;
+      let subIngredients = null;
+      let subJobName = null;
+      // If this ingredient is itself craftable, resolve one level deeper so we
+      // can compare "buy it" against "craft it yourself" — reusing one of its
+      // recipes (the first one Garland lists) as the representative cost.
+      if (item.craft && item.craft.length){
+        const subRecipe = item.craft[0];
+        subJobName = JOB_NAMES[subRecipe.job] || ('Job ' + subRecipe.job);
+        subIngredients = await Promise.all(subRecipe.ingredients.map(async sub => {
+          craftUI.log('    resolving sub-ingredient ' + sub.id + '...');
+          try{
+            const subData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + sub.id + '.json', craftUI.log);
+            return { id: sub.id, amount: sub.amount, name: subData.item.name, tradeable: !!subData.item.tradeable };
+          }catch(e){
+            return { id: sub.id, amount: sub.amount, name: 'Item ' + sub.id, tradeable: false, resolveFailed: true };
+          }
+        }));
+      }
+      return { id: ing.id, amount: ing.amount, name: item.name, tradeable: !!item.tradeable, raw: item, subIngredients, subJobName };
     }catch(e){
-      return { id: ing.id, amount: ing.amount, name: 'Item ' + ing.id, tradeable: false, resolveFailed: true, raw: null };
+      return { id: ing.id, amount: ing.amount, name: 'Item ' + ing.id, tradeable: false, resolveFailed: true, raw: null, subIngredients: null, subJobName: null };
     }
   }));
+}
+
+// Cost to craft ONE unit of an ingredient from its own sub-ingredients, using
+// whatever prices we already fetched. Returns null if any required
+// sub-ingredient can't be priced (so the comparison can't be made honestly).
+function computeCraftCost(ing, priceResult){
+  if (!ing.subIngredients) return null;
+  let total = 0;
+  for (const sub of ing.subIngredients){
+    if (sub.resolveFailed || !sub.tradeable) return null;
+    if (priceResult.unresolved.includes(sub.id) || priceResult.unresolved.includes(String(sub.id)) || !priceResult.items[sub.id]) return null;
+    const listing = cheapestListing(priceResult.items[sub.id]);
+    if (!listing) return null;
+    total += listing.pricePerUnit * sub.amount;
+  }
+  return total;
 }
 
 async function fetchPrices(world, ids, logFn){
@@ -626,6 +684,7 @@ function cheapestListing(priceEntry){
 function fmt(n){ return n.toLocaleString('en-US'); }
 
 async function getPrices(){
+  bumpMood();
   const world = FIXED_WORLD;
   if (!resolvedItem){ alert('Look up a recipe first.'); return; }
 
@@ -643,31 +702,42 @@ async function getPrices(){
     currentIngredients = await resolveIngredients(recipe);
 
     const tradeableIds = currentIngredients.filter(i=>i.tradeable && !i.resolveFailed).map(i=>i.id);
+    const subIds = [];
+    currentIngredients.forEach(ing => {
+      if (ing.subIngredients){
+        ing.subIngredients.forEach(sub => {
+          if (sub.tradeable && !sub.resolveFailed) subIds.push(sub.id);
+        });
+      }
+    });
+    const allIds = [...new Set([...tradeableIds, ...subIds])];
     craftUI.setStage('prices');
     craftUI.log('Fetching live prices for ' + world + '...');
     let priceResult;
     try{
-      priceResult = await fetchPrices(world, tradeableIds, craftUI.log);
+      priceResult = await fetchPrices(world, allIds, craftUI.log);
     }catch(e){
       throw new Error('Universalis lookup failed for the ' + world + ' data center. (' + e.message + ')');
     }
 
     const rows = currentIngredients.map(ing=>{
+      const craftCost = computeCraftCost(ing, priceResult);
+      const base = { ...ing, craftCost };
       if (ing.resolveFailed){
-        return {...ing, status:'prohibited', unit:null, subtotal:0};
+        return {...base, status:'prohibited', unit:null, subtotal:0};
       }
       if (!ing.tradeable){
-        return {...ing, status:'prohibited', unit:null, subtotal:0};
+        return {...base, status:'prohibited', unit:null, subtotal:0};
       }
       if (priceResult.unresolved.includes(ing.id) || priceResult.unresolved.includes(String(ing.id)) || !priceResult.items[ing.id]){
-        return {...ing, status:'prohibited', unit:null, subtotal:0};
+        return {...base, status:'prohibited', unit:null, subtotal:0};
       }
       const listing = cheapestListing(priceResult.items[ing.id]);
       if (!listing){
-        return {...ing, status:'nolistings', unit:null, subtotal:0};
+        return {...base, status:'nolistings', unit:null, subtotal:0};
       }
       return {
-        ...ing,
+        ...base,
         status:'ok',
         unit: listing.pricePerUnit,
         listingWorld: listing.worldName,
@@ -693,7 +763,26 @@ function renderAcquisitionDetail(row){
   }
   const tags = summarizeAcquisition(row.raw);
   const wikiLink = wikiUrlForName(row.name);
+  let compareHtml = '';
+  if (row.craftCost != null){
+    const craftTotal = row.craftCost * row.amount;
+    if (row.status === 'ok'){
+      const cheaperToCraft = craftTotal < row.subtotal;
+      compareHtml = '<p class="recipe-meta" style="margin:8px 0 0;">'
+        + 'Buying ' + row.amount + '&times;: ' + fmt(row.subtotal) + 'g. Crafting it yourself ('
+        + row.subJobName + '): ~' + fmt(craftTotal) + 'g in raw materials. '
+        + (cheaperToCraft
+            ? '<b style="color:var(--good);">Cheaper to craft it yourself.</b>'
+            : '<b>Cheaper to just buy it.</b>')
+        + '</p>';
+    } else {
+      compareHtml = '<p class="recipe-meta" style="margin:8px 0 0;">Can\'t buy this one on the market board right now, '
+        + 'but you could craft it yourself (' + row.subJobName + ') for roughly ~' + fmt(craftTotal) + 'g in raw materials for '
+        + row.amount + '.</p>';
+    }
+  }
   return '<div class="acq-tags">' + tags.map(t=>'<span class="acq-tag">'+t+'</span>').join('') + '</div>'
+    + compareHtml
     + '<p class="acq-link" style="margin:6px 0 0;"><a href="' + wikiLink + '" target="_blank" rel="noopener">View on wiki →</a></p>';
 }
 
@@ -777,6 +866,7 @@ function renderResults(itemName, recipe, world, rows){
 
 // --- Item Lookup tab: standalone "how do I get this?" search ---
 async function lookupItem(){
+  bumpMood();
   const raw = document.getElementById('lookupInput').value.trim();
   if (!raw){ alert('Type an item name or paste a wiki URL.'); return; }
   lookupUI.hideError();
@@ -805,6 +895,11 @@ async function lookupItem(){
     const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json', lookupUI.log);
     renderItemLookup(itemData.item);
     lookupUI.log('Done.');
+    addRecent('lycaas_recent_lookup', { name: itemData.item.name, url: pageUrl });
+    renderRecent('lycaas_recent_lookup', 'recentLookup', item => {
+      document.getElementById('lookupInput').value = item.url;
+      lookupItem();
+    });
   }catch(e){
     lookupUI.log('Error: ' + e.message, true);
     lookupUI.showError(e);
@@ -825,6 +920,51 @@ function renderItemLookup(item){
       <p class="acq-link" style="margin:10px 0 0;"><a href="${wikiLink}" target="_blank" rel="noopener">View on wiki →</a></p>
     </div>
   `;
+}
+
+// --- The slave's mood: purely cosmetic, tracked per browser session (resets
+// when the tab/browser closes), gets more dramatic the more price-fetching
+// labor you put it through in one sitting. ---
+const MOOD_LINES = [
+  "the slave fetches; the slave does not explain itself.",
+  "the slave's legs hurt. the slave fetches anyway.",
+  "the slave has started talking to the coins. the coins do not answer.",
+  "the slave has seen things in the Market Board ledgers. the slave keeps fetching.",
+  "the slave would like a raise. the slave will not get one. the slave fetches.",
+  "the slave is now fully feral and communicates only in gil totals.",
+];
+function bumpMood(){
+  const n = parseInt(sessionStorage.getItem('lycaas_search_count') || '0', 10) + 1;
+  sessionStorage.setItem('lycaas_search_count', String(n));
+  const idx = Math.min(MOOD_LINES.length - 1, Math.floor(n / 3));
+  const el = document.getElementById('footerNote');
+  if (el) el.textContent = MOOD_LINES[idx];
+}
+
+// --- Recent searches: click back on something you already looked up, kept
+// per-browser in localStorage (there's no server here to share this across
+// people — it's a static page). Separate lists for each tab since a craft
+// recipe and a bare item lookup aren't really interchangeable. ---
+function loadRecent(key){
+  try{ return JSON.parse(localStorage.getItem(key) || '[]'); }
+  catch(e){ return []; }
+}
+function addRecent(key, entry){
+  let list = loadRecent(key).filter(i => i.url !== entry.url);
+  list.unshift(entry);
+  list = list.slice(0, 8);
+  localStorage.setItem(key, JSON.stringify(list));
+}
+function renderRecent(key, containerId, onClick){
+  const list = loadRecent(key);
+  const el = document.getElementById(containerId);
+  if (!list.length){ el.innerHTML = ''; el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  el.innerHTML = '<span class="recent-label">Recent:</span> ' +
+    list.map((item, idx) => '<button class="recent-chip" data-idx="' + idx + '">' + item.name + '</button>').join('');
+  el.querySelectorAll('.recent-chip').forEach(btn=>{
+    btn.addEventListener('click', ()=> onClick(list[parseInt(btn.dataset.idx, 10)]));
+  });
 }
 
 // --- Basket: a running list of "please craft me this" requests, kept in
@@ -863,6 +1003,18 @@ function removeFromBasket(key){
   saveBasket(loadBasket().filter(i => i.key !== key));
   renderBasket();
 }
+function adjustBasketQty(key, delta){
+  const list = loadBasket();
+  const item = list.find(i => i.key === key);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0){
+    saveBasket(list.filter(i => i.key !== key));
+  } else {
+    saveBasket(list);
+  }
+  renderBasket();
+}
 function clearBasket(){
   if (!confirm('Empty the whole basket?')) return;
   saveBasket([]);
@@ -871,6 +1023,8 @@ function clearBasket(){
 function renderBasket(){
   const list = loadBasket();
   document.getElementById('basketCount').textContent = list.reduce((s,i)=>s + i.qty, 0);
+  const knownTotal = list.filter(i => i.cost != null).reduce((s,i) => s + i.cost * i.qty, 0);
+  document.getElementById('basketTotal').textContent = knownTotal ? ('· ~' + fmt(knownTotal) + 'g') : '';
   const body = document.getElementById('basketItems');
   if (!list.length){
     body.innerHTML = '<p class="recipe-meta" style="margin:0;">Basket\'s empty. Go find something to make the slave suffer for.</p>';
@@ -878,12 +1032,21 @@ function renderBasket(){
   }
   body.innerHTML = list.map(i => `
     <div class="basket-item">
-      <span>${i.qty}&times; ${i.name}${i.job ? (' <span class="world-tag">(' + i.job + (i.lvl ? (' Lv.' + i.lvl) : '') + ')</span>') : ''}</span>
-      <span>${i.cost != null ? (fmt(i.cost) + 'g') : 'not priced'} <button class="secondary basket-remove" data-key="${i.key}">✕</button></span>
+      <span>${i.name}${i.job ? (' <span class="world-tag">(' + i.job + (i.lvl ? (' Lv.' + i.lvl) : '') + ')</span>') : ''}</span>
+      <span class="basket-controls">
+        <button class="secondary qty-btn" data-key="${i.key}" data-delta="-1">−</button>
+        <span class="basket-qty">${i.qty}</span>
+        <button class="secondary qty-btn" data-key="${i.key}" data-delta="1">+</button>
+        <span style="min-width:70px; display:inline-block; text-align:right;">${i.cost != null ? (fmt(i.cost * i.qty) + 'g') : 'not priced'}</span>
+        <button class="secondary basket-remove" data-key="${i.key}">✕</button>
+      </span>
     </div>
   `).join('');
   body.querySelectorAll('.basket-remove').forEach(btn=>{
     btn.addEventListener('click', ()=>removeFromBasket(btn.dataset.key));
+  });
+  body.querySelectorAll('.qty-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>adjustBasketQty(btn.dataset.key, parseInt(btn.dataset.delta, 10)));
   });
 }
 async function copyBasket(){
@@ -923,6 +1086,21 @@ document.getElementById('basketToggleBtn').addEventListener('click', ()=>{
 document.getElementById('copyBasketBtn').addEventListener('click', copyBasket);
 document.getElementById('clearBasketBtn').addEventListener('click', clearBasket);
 renderBasket();
+renderRecent('lycaas_recent_craft', 'recentCraft', item => {
+  document.getElementById('wikiUrl').value = item.url;
+  lookupRecipe();
+});
+renderRecent('lycaas_recent_lookup', 'recentLookup', item => {
+  document.getElementById('lookupInput').value = item.url;
+  lookupItem();
+});
+(function restoreMood(){
+  const n = parseInt(sessionStorage.getItem('lycaas_search_count') || '0', 10);
+  if (n > 0){
+    const idx = Math.min(MOOD_LINES.length - 1, Math.floor(n / 3));
+    document.getElementById('footerNote').textContent = MOOD_LINES[idx];
+  }
+})();
 </script>
 </body>
 </html>
