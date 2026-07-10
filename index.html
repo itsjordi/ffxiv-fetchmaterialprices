@@ -69,12 +69,64 @@
   .recipe-meta{color:var(--dim); font-size:.85rem; margin:6px 0 14px; font-style:italic;}
   .footer-note{font-size:.75rem; color:var(--dim); line-height:1.5; margin-top:24px; text-align:center; font-style:italic;}
   a{color:var(--accent);}
+
+  details.panel summary{cursor:pointer; font-weight:700; color:var(--accent); list-style:none;}
+  details.panel summary::-webkit-details-marker{display:none;}
+  details.panel summary::before{content:"▸ "; font-size:.85em;}
+  details.panel[open] summary::before{content:"▾ "; }
+  details.panel ol{margin:12px 0 4px; padding-left:22px; line-height:1.7;}
+  details.panel[open] summary{margin-bottom:4px; display:block;}
+  #logDetails summary{font-size:.8rem; color:var(--dim); font-style:italic;}
+  #logDetails{background:transparent; border:none; box-shadow:none; padding:0; margin-bottom:16px;}
+  #logDetails[open] summary{margin-bottom:8px;}
+
+  .warn-banner{border-color:var(--bad) !important; border-width:2px !important;}
+  .warn-banner p{margin:0; line-height:1.5;}
+
+  .friendly-status{
+    display:flex; align-items:center; gap:12px; padding:14px 18px; margin-bottom:16px;
+    background:var(--panel); border:1px dashed var(--accent-dim); border-radius:2px;
+    font-style:italic; color:var(--ink);
+  }
+  .spinner-emoji{
+    font-size:1.6rem; display:inline-block; animation:spin-wobble 1.1s ease-in-out infinite;
+  }
+  @keyframes spin-wobble{
+    0%{transform:rotate(0deg) scale(1);}
+    50%{transform:rotate(180deg) scale(1.15);}
+    100%{transform:rotate(360deg) scale(1);}
+  }
+
+  .error-card{border-color:var(--bad) !important; border-width:2px !important;}
+  .error-card .funny-line{font-size:1.02rem; margin:0 0 12px; font-style:italic;}
+  button.secondary{
+    background:var(--panel2); color:var(--ink); border:1px solid var(--border);
+  }
+  .copy-confirm{color:var(--good); font-style:italic; font-size:.85rem; align-self:center;}
 </style>
 </head>
 <body>
 <div class="app">
   <h1>Lycaa's Slave</h1>
   <p class="sub">Fetches material prices, so you know what it'll cost to craft.</p>
+
+  <div id="fileWarning" class="panel warn-banner hidden">
+    <p><b>Heads up:</b> you appear to have opened this straight from a file on your computer.
+    A lot of browsers flatly refuse to let a local file talk to the internet, which means every
+    lookup below may fail instantly no matter what — not the slave's fault, your browser's. Ask
+    whoever gave you this to host it somewhere (GitHub Pages, etc.) instead of sending you the raw file.</p>
+  </div>
+
+  <details class="panel" id="tutorial" open>
+    <summary>How this works (tap to collapse)</summary>
+    <ol>
+      <li>Go to the FFXIV wiki and find the item or piece of gear you want to craft.</li>
+      <li>Copy that page's URL and paste it in the box below.</li>
+      <li>Click <b>"Look up recipe"</b> — the slave goes and reads the page for you.</li>
+      <li>Click <b>"Get prices"</b> and wait for the slave to bring back a receipt. It only shops on the <b>Light</b> data center — that's not a setting you can change.</li>
+    </ol>
+    <p class="recipe-meta" style="margin-bottom:0;">If it explodes, hit "Copy error for Lycaa" on the error card and send it over.</p>
+  </details>
 
   <div class="panel">
     <div class="row">
@@ -98,16 +150,31 @@
       </div>
     </div>
     <div class="row">
-      <div class="field">
-        <label for="world">World or Data Center</label>
-        <input type="text" id="world" list="worldList" placeholder="e.g. Twintania or Light">
-        <datalist id="worldList"></datalist>
-      </div>
-      <button id="priceBtn" style="align-self:flex-end;">Get prices</button>
+      <button id="priceBtn">Get prices (Light data center)</button>
     </div>
   </div>
 
-  <pre id="log"></pre>
+  <div id="friendlyStatus" class="friendly-status hidden">
+    <span class="spinner-emoji" id="spinnerEmoji">🪙</span>
+    <span id="friendlyText">Thinking...</span>
+  </div>
+
+  <div id="errorCard" class="panel error-card hidden">
+    <p class="funny-line" id="errorFunny"></p>
+    <div class="row">
+      <button id="copyErrorBtn" class="secondary">Copy error for Lycaa</button>
+      <span id="copyConfirm" class="copy-confirm hidden">Copied. Go forth.</span>
+    </div>
+    <details>
+      <summary style="cursor:pointer; color:var(--dim); font-style:italic; font-size:.8rem;">Technical details</summary>
+      <pre id="errorTech" style="white-space:pre-wrap; font-size:.78rem; color:var(--dim); margin-top:8px;"></pre>
+    </details>
+  </div>
+
+  <details id="logDetails">
+    <summary>Technical log (for the curious, or for Lycaa)</summary>
+    <pre id="log"></pre>
+  </details>
   <div id="results"></div>
 
   <p class="footer-note">the slave fetches; the slave does not explain itself.</p>
@@ -116,22 +183,12 @@
 <script>
 const JOB_NAMES = {8:'Carpenter',9:'Blacksmith',10:'Armorer',11:'Goldsmith',12:'Leatherworker',13:'Weaver',14:'Alchemist',15:'Culinarian'};
 
-const WORLDS = [
-  'Aether','Adamantoise','Cactuar','Faerie','Gilgamesh','Jenova','Midgardsormr','Sargatanas','Siren',
-  'Crystal','Balmung','Brynhildr','Coeurl','Diabolos','Goblin','Malboro','Mateus','Zalera',
-  'Dynamis','Halicarnassus','Maduin','Marilith','Seraph','Cuchulainn','Golem','Kraken','Rafflesia',
-  'Primal','Behemoth','Excalibur','Exodus','Famfrit','Hyperion','Lamia','Leviathan','Ultros',
-  'Chaos','Cerberus','Louisoix','Moogle','Omega','Phantom','Ragnarok','Sagittarius','Spriggan',
-  'Light','Alpha','Lich','Odin','Phoenix','Raiden','Shiva','Twintania','Zodiark',
-  'Elemental','Aegis','Atomos','Carbuncle','Garuda','Gungnir','Kujata','Tonberry','Typhon',
-  'Gaia','Alexander','Bahamut','Durandal','Fenrir','Ifrit','Ridill','Tiamat','Ultima',
-  'Mana','Anima','Asura','Chocobo','Hades','Ixion','Masamune','Pandaemonium','Titan',
-  'Meteor','Belias','Mandragora','Ramuh','Shinryu','Unicorn','Valefor','Yojimbo','Zeromus',
-  'Materia','Bismarck','Ravana','Sephirot','Sophia','Zurvan'
-];
-document.getElementById('worldList').innerHTML = WORLDS.map(w=>`<option value="${w}">`).join('');
-const lastWorld = localStorage.getItem('ffxiv_last_world');
-if (lastWorld) document.getElementById('world').value = lastWorld;
+// Pricing is pinned to the Light data center — not user-configurable.
+const FIXED_WORLD = 'Light';
+
+if (location.protocol === 'file:'){
+  document.getElementById('fileWarning').classList.remove('hidden');
+}
 
 // Used for JSON APIs (Garland Tools, Universalis) — no "reader" services here since
 // those reformat content and would break JSON.parse.
@@ -140,6 +197,7 @@ const PROXIES_JSON = [
   {label:'allorigins',wrap:u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u)},
   {label:'corsproxy', wrap:u => 'https://corsproxy.io/?url=' + encodeURIComponent(u)},
   {label:'codetabs',  wrap:u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)},
+  {label:'thingproxy',wrap:u => 'https://thingproxy.freeboard.io/fetch/' + u},
 ];
 // Used for the wiki HTML page — includes Jina's reader service, which fetches with its
 // own crawler and is much less likely to get blocked by the wiki's bot protection than
@@ -150,7 +208,65 @@ const PROXIES_HTML = [
   {label:'allorigins',wrap:u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u)},
   {label:'corsproxy', wrap:u => 'https://corsproxy.io/?url=' + encodeURIComponent(u)},
   {label:'codetabs',  wrap:u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)},
+  {label:'thingproxy',wrap:u => 'https://thingproxy.freeboard.io/fetch/' + u},
 ];
+
+// --- Friendly status (for non-technical friends who just want to know it's alive) ---
+const STAGE_MESSAGES = {
+  wiki:        ['Reading the wiki page over its shoulder...', 'Politely knocking on the wiki\'s door...', 'Sneaking past the wiki\'s bouncer...'],
+  recipe:      ['Asking Garland Tools nicely for the recipe...', 'Rummaging through the crafting logs...', 'Consulting the ancient archives...'],
+  ingredients: ['Chasing down what these mats are even called...', 'Interrogating the ingredients one by one...', 'Reading tiny item labels...'],
+  prices:      ['Storming the Market Board...', 'Haggling with retainers...', 'Counting gil (badly, with its paws)...', 'Checking every world\'s price tags...'],
+};
+let statusInterval = null;
+function setStage(stage){
+  const el = document.getElementById('friendlyStatus');
+  const textEl = document.getElementById('friendlyText');
+  el.classList.remove('hidden');
+  const msgs = STAGE_MESSAGES[stage] || ['Working on it...'];
+  let i = 0;
+  textEl.textContent = msgs[0];
+  clearInterval(statusInterval);
+  statusInterval = setInterval(()=>{
+    i = (i + 1) % msgs.length;
+    textEl.textContent = msgs[i];
+  }, 1700);
+}
+function stopFriendlyStatus(){
+  clearInterval(statusInterval);
+  document.getElementById('friendlyStatus').classList.add('hidden');
+}
+
+const FUNNY_ERROR_LINES = [
+  "The slave tripped, dropped the ledger, and is refusing to make eye contact.",
+  "Something out there said no. The slave does not know why. The slave is embarrassed.",
+  "The Market Board slammed its gates shut and the slave got its fingers caught.",
+  "The slave went to fetch prices and came back with nothing but excuses.",
+  "Somewhere, a server said 'no.' The slave took it personally.",
+];
+function showError(err){
+  document.getElementById('errorCard').classList.remove('hidden');
+  document.getElementById('errorFunny').textContent =
+    FUNNY_ERROR_LINES[Math.floor(Math.random() * FUNNY_ERROR_LINES.length)];
+  document.getElementById('errorTech').textContent = err.message;
+  document.getElementById('logDetails').open = true;
+}
+function hideError(){
+  document.getElementById('errorCard').classList.add('hidden');
+}
+document.getElementById('copyErrorBtn').addEventListener('click', async ()=>{
+  const text = 'Lycaa\'s Slave error report:\n' + document.getElementById('errorTech').textContent;
+  try{
+    await navigator.clipboard.writeText(text);
+  }catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+  const c = document.getElementById('copyConfirm');
+  c.classList.remove('hidden');
+  setTimeout(()=>c.classList.add('hidden'), 2500);
+});
 
 function log(msg, isErr){
   const el = document.getElementById('log');
@@ -163,26 +279,45 @@ function log(msg, isErr){
 function clearLog(){ document.getElementById('log').innerHTML = ''; }
 
 async function fetchViaProxies(url, proxies, timeoutMs){
+  // Race every route in parallel instead of one-at-a-time — a sequential chain of
+  // five 15s timeouts could take 75 seconds to fail, which just looks like a frozen
+  // page. Racing means we're bounded by the slowest single attempt (~15s worst case),
+  // and usually a lot faster since one of them answers quickly.
   timeoutMs = timeoutMs || 15000;
   const attempts = [];
-  for (const {label, wrap} of proxies){
+  const tasks = proxies.map(({label, wrap}) => {
     const target = wrap(url);
-    try{
-      const controller = new AbortController();
-      const t = setTimeout(()=>controller.abort(), timeoutMs);
-      const res = await fetch(target, {signal:controller.signal});
-      clearTimeout(t);
-      if (!res.ok){ attempts.push(label + ': HTTP ' + res.status); log('  [' + label + '] HTTP ' + res.status); continue; }
-      const body = await res.text();
-      if (!body || body.trim().length === 0){ attempts.push(label + ': empty response'); log('  [' + label + '] empty response'); continue; }
-      return body;
-    }catch(e){
-      const msg = e.name === 'AbortError' ? 'timed out' : e.message;
-      attempts.push(label + ': ' + msg);
-      log('  [' + label + '] ' + msg);
-    }
+    const controller = new AbortController();
+    const timer = setTimeout(()=>controller.abort(), timeoutMs);
+    return fetch(target, {signal:controller.signal})
+      .then(async res => {
+        if (!res.ok){
+          const msg = label + ': HTTP ' + res.status;
+          attempts.push(msg); log('  [' + label + '] HTTP ' + res.status);
+          throw new Error(msg);
+        }
+        const body = await res.text();
+        if (!body || body.trim().length === 0){
+          const msg = label + ': empty response';
+          attempts.push(msg); log('  [' + label + '] empty response');
+          throw new Error(msg);
+        }
+        log('  [' + label + '] got it');
+        return body;
+      })
+      .catch(e => {
+        if (e.message && (e.message.startsWith(label + ':'))) throw e; // already logged above
+        const msg = label + ': ' + (e.name === 'AbortError' ? 'timed out' : e.message);
+        attempts.push(msg); log('  [' + label + '] ' + (e.name === 'AbortError' ? 'timed out' : e.message));
+        throw e;
+      })
+      .finally(()=> clearTimeout(timer));
+  });
+  try{
+    return await Promise.any(tasks);
+  }catch(e){
+    throw new Error('every fetch route failed for ' + url + ' — [' + attempts.join(' | ') + ']');
   }
-  throw new Error('every fetch route failed for ' + url + ' — [' + attempts.join(' | ') + ']');
 }
 async function fetchHtml(url, timeoutMs){
   return fetchViaProxies(url, PROXIES_HTML, timeoutMs);
@@ -209,6 +344,7 @@ async function lookupRecipe(){
   if (!urlInput){ alert('Paste a wiki page URL first.'); return; }
   document.getElementById('itemInfo').classList.add('hidden');
   document.getElementById('results').innerHTML = '';
+  hideError();
   clearLog();
   const btn = document.getElementById('lookupBtn');
   btn.disabled = true;
@@ -217,6 +353,7 @@ async function lookupRecipe(){
     try{ pageUrl = new URL(urlInput).toString(); }
     catch(e){ throw new Error('That doesn\'t look like a valid URL.'); }
 
+    setStage('wiki');
     log('Fetching wiki page...');
     const html = await fetchHtml(pageUrl);
 
@@ -224,6 +361,7 @@ async function lookupRecipe(){
     if (!gtId) throw new Error('Could not find a market/item link on this page. Make sure it\'s an item page on ffxiv.consolegameswiki.com.');
     log('Found item ID ' + gtId + '. Fetching recipe data from Garland Tools...');
 
+    setStage('recipe');
     const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json');
     const name = itemData.item.name;
     const crafts = itemData.item.craft || [];
@@ -243,33 +381,26 @@ async function lookupRecipe(){
       ? ('This item can be crafted ' + crafts.length + ' different ways — pick one below.')
       : ('Recipe: ' + (JOB_NAMES[crafts[0].job] || crafts[0].job) + ' · Lv.' + crafts[0].lvl);
     document.getElementById('itemInfo').classList.remove('hidden');
-    log('Ready. Enter a world or data center and click "Get prices".');
+    log('Ready. Click "Get prices" (Light data center).');
   }catch(e){
     log('Error: ' + e.message, true);
+    showError(e);
   }finally{
+    stopFriendlyStatus();
     btn.disabled = false;
   }
 }
 
 async function resolveIngredients(recipe){
-  const results = [];
-  for (const ing of recipe.ingredients){
+  return Promise.all(recipe.ingredients.map(async ing => {
     log('  resolving ingredient ' + ing.id + '...');
-    let data;
     try{
-      data = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + ing.id + '.json');
+      const data = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + ing.id + '.json');
+      return { id: ing.id, amount: ing.amount, name: data.item.name, tradeable: !!data.item.tradeable };
     }catch(e){
-      results.push({id:ing.id, amount:ing.amount, name:'Item ' + ing.id, tradeable:false, resolveFailed:true});
-      continue;
+      return { id: ing.id, amount: ing.amount, name: 'Item ' + ing.id, tradeable: false, resolveFailed: true };
     }
-    results.push({
-      id: ing.id,
-      amount: ing.amount,
-      name: data.item.name,
-      tradeable: !!data.item.tradeable
-    });
-  }
-  return results;
+  }));
 }
 
 async function fetchPrices(world, ids){
@@ -290,29 +421,30 @@ function cheapestListing(priceEntry){
 function fmt(n){ return n.toLocaleString('en-US'); }
 
 async function getPrices(){
-  const world = document.getElementById('world').value.trim();
-  if (!world){ alert('Enter a world or data center name.'); return; }
+  const world = FIXED_WORLD;
   if (!resolvedItem){ alert('Look up a recipe first.'); return; }
-  localStorage.setItem('ffxiv_last_world', world);
 
   const btn = document.getElementById('priceBtn');
   btn.disabled = true;
   document.getElementById('results').innerHTML = '';
+  hideError();
   clearLog();
   try{
     const recipeIdx = parseInt(document.getElementById('recipeSelect').value || '0', 10);
     const recipe = resolvedItem.crafts[recipeIdx];
 
+    setStage('ingredients');
     log('Resolving ' + recipe.ingredients.length + ' ingredient(s)...');
     currentIngredients = await resolveIngredients(recipe);
 
     const tradeableIds = currentIngredients.filter(i=>i.tradeable && !i.resolveFailed).map(i=>i.id);
+    setStage('prices');
     log('Fetching live prices for ' + world + '...');
     let priceResult;
     try{
       priceResult = await fetchPrices(world, tradeableIds);
     }catch(e){
-      throw new Error('Universalis lookup failed — check that "' + world + '" is a valid world or data center name. (' + e.message + ')');
+      throw new Error('Universalis lookup failed for the ' + world + ' data center. (' + e.message + ')');
     }
 
     const rows = currentIngredients.map(ing=>{
@@ -343,7 +475,9 @@ async function getPrices(){
     log('Done.');
   }catch(e){
     log('Error: ' + e.message, true);
+    showError(e);
   }finally{
+    stopFriendlyStatus();
     btn.disabled = false;
   }
 }
@@ -398,7 +532,7 @@ function renderResults(itemName, recipe, world, rows){
       </table>
       ${anyProhibited ? '<p class="recipe-meta prohibited">Some ingredients are market prohibited and excluded from the total.</p>' : ''}
       ${anyNoListings ? '<p class="recipe-meta nolistings">Some ingredients currently have no one selling on ' + world + '.</p>' : ''}
-      <p class="recipe-meta">Prices are the cheapest single listing found on ${world} at lookup time (across all its worlds, if you entered a data center). They change constantly.</p>
+      <p class="recipe-meta">Prices are the cheapest single listing found across the Light data center at lookup time. They change constantly.</p>
     </div>
   `;
 }
@@ -406,7 +540,6 @@ function renderResults(itemName, recipe, world, rows){
 document.getElementById('lookupBtn').addEventListener('click', lookupRecipe);
 document.getElementById('priceBtn').addEventListener('click', getPrices);
 document.getElementById('wikiUrl').addEventListener('keydown', e=>{ if(e.key==='Enter') lookupRecipe(); });
-document.getElementById('world').addEventListener('keydown', e=>{ if(e.key==='Enter') getPrices(); });
 </script>
 </body>
 </html>
