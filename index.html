@@ -838,28 +838,61 @@ function wikiUrlForName(name){
   return 'https://ffxiv.consolegameswiki.com/wiki/' + encodeURIComponent(name.trim().replace(/\s+/g, '_'));
 }
 
+// Garland Tools' `item.treasure` field is NOT specifically "drops from a
+// Timeworn Map" — it's really just "obtained by opening this other item",
+// which covers PvP reward chests, raid/dungeon coffers, gil-shop crates, MSQ
+// reward caskets, AND genuine Timeworn Map troves alike, all through the same
+// field. Garland's own JSON response for an item includes a "partials" list
+// naming every referenced item (including whatever's in `treasure`), so this
+// resolves the real container instead of assuming it's a map. `resolveIngredients`
+// and every other fetch site stash that partials list onto the item object as
+// `__partials` right after fetching, so no extra request is needed here.
+function resolveTreasureSources(item){
+  if (!item || !item.treasure || !item.treasure.length) return [];
+  const partials = item.__partials || [];
+  return item.treasure.map(id => {
+    const found = partials.find(p => String(p.id) === String(id) && p.type === 'item');
+    const name = (found && found.obj && found.obj.n) ? found.obj.n : ('Item ' + id);
+    return { id, name };
+  });
+}
+// Convenience for the compact in-table badge, which only has room for one
+// source name — almost always there's just the one container anyway.
+function primaryTreasureSource(item){
+  const sources = resolveTreasureSources(item);
+  if (!sources.length) return null;
+  return { name: sources[0].name, url: wikiUrlForName(sources[0].name) };
+}
+
 // Reads Garland Tools' raw item fields (already fetched — no extra request) and
 // turns them into plain-English tags: how do you actually get this thing?
+// Returns { text, url } objects — most tags are plain text, but the "From: X"
+// coffer/container tag links straight to that container's own wiki page.
 function summarizeAcquisition(item){
   const tags = [];
+  const tag = (text, url) => tags.push({ text, url: url || null });
   if (item.craft && item.craft.length){
     const jobs = [...new Set(item.craft.map(c => JOB_NAMES[c.job] || ('Job ' + c.job)))];
-    tags.push('Crafted (' + jobs.join(', ') + ')');
+    tag('Crafted (' + jobs.join(', ') + ')');
   }
-  if (item.nodes && item.nodes.length) tags.push('Gathered');
-  if (item.ventures && item.ventures.length) tags.push('Retainer Venture');
-  if (item.voyages && item.voyages.length) tags.push('Airship/Submarine Voyage');
-  if (item.desynthedFrom && item.desynthedFrom.length) tags.push('Desynthesis');
-  if (item.drops && item.drops.length) tags.push('Monster Drop');
-  if (item.instances && item.instances.length) tags.push('Dungeon/Trial/Raid Drop');
-  if (item.quests && item.quests.length) tags.push('Quest Reward');
-  if (item.treasure && item.treasure.length) tags.push('Treasure Map');
-  if (item.leves && item.leves.length) tags.push('Levequest');
+  if (item.nodes && item.nodes.length) tag('Gathered');
+  if (item.ventures && item.ventures.length) tag('Retainer Venture');
+  if (item.voyages && item.voyages.length) tag('Airship/Submarine Voyage');
+  if (item.desynthedFrom && item.desynthedFrom.length) tag('Desynthesis');
+  if (item.drops && item.drops.length) tag('Monster Drop');
+  if (item.instances && item.instances.length) tag('Dungeon/Trial/Raid Drop');
+  if (item.quests && item.quests.length) tag('Quest Reward');
+  if (item.treasure && item.treasure.length){
+    resolveTreasureSources(item).forEach(src => {
+      tag('From: ' + src.name, wikiUrlForName(src.name));
+    });
+  }
+  if (item.leves && item.leves.length) tag('Levequest');
   if (item.tradeShops && item.tradeShops.length){
     const shops = [...new Set(item.tradeShops.map(s=>s.shop).filter(Boolean))];
-    tags.push(shops.length ? ('Special Shop (' + shops.join(', ') + ')') : 'Special Shop');
+    tag(shops.length ? ('Special Shop (' + shops.join(', ') + ')') : 'Special Shop');
   }
-  if (!tags.length) tags.push('Source unclear — check the wiki link below');
+  if (!tags.length) tag('Source unclear — check the wiki link below');
   return tags;
 }
 
@@ -1071,6 +1104,11 @@ async function resolveIngredients(recipe, logFn){
     try{
       const data = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + ing.id + '.json', logFn);
       const item = data.item;
+      // Stash the "partials" list (names for every id referenced anywhere in
+      // this item's data — including whatever's behind item.treasure) right
+      // on the item so anything holding onto this object later can resolve a
+      // coffer/container's real name without an extra fetch.
+      item.__partials = data.partials || [];
       let subIngredients = null;
       let subJobName = null;
       // If this ingredient is itself craftable, resolve one level deeper so we
@@ -1374,8 +1412,9 @@ async function getPrices(){
       // among the many things Timeworn Maps can drop), but that's not the interesting
       // fact about a crystal — they're mainly cheap/common catalysts, not a "treasure
       // map item." The Crystal section already tells that story better.
-      const isTreasure = !isCrystal && !!(ing.raw && ing.raw.treasure && ing.raw.treasure.length);
-      const base = { ...ing, craftCost, isTreasure, isCrystal };
+      const treasureSrc = (!isCrystal && ing.raw) ? primaryTreasureSource(ing.raw) : null;
+      const isTreasure = !!treasureSrc;
+      const base = { ...ing, craftCost, isTreasure, isCrystal, treasureSrc };
       if (ing.resolveFailed){
         return {...base, status:'prohibited', unit:null, subtotal:0};
       }
@@ -1494,7 +1533,7 @@ function renderAcquisitionDetail(row){
   const universalisPart = row.tradeable
     ? (' &nbsp;·&nbsp; <a href="https://universalis.app/market/' + row.id + '" target="_blank" rel="noopener">Check on Universalis →</a>')
     : '';
-  return '<div class="acq-tags">' + tags.map(t=>'<span class="acq-tag">'+t+'</span>').join('') + '</div>'
+  return '<div class="acq-tags">' + renderAcqTags(tags) + '</div>'
     + outlierHtml
     + listingsHtml
     + compareHtml
@@ -1519,7 +1558,9 @@ function renderIngredientRows(rows, prefix, world){
   function buildRow(r){
     const idx = runningIdx++;
     const treasureBadge = r.isTreasure
-      ? '<span class="treasure-tag" title="Comes from a Treasure Map, not something you buy/craft directly — these tend to be pricey and slow to get.">🗺 Treasure Map</span>'
+      ? ('<span class="treasure-tag" title="Comes from opening ' + (r.treasureSrc ? r.treasureSrc.name : 'a coffer') + ' — not something you buy/craft directly.">📦 '
+        + (r.treasureSrc ? ('<a href="' + r.treasureSrc.url + '" target="_blank" rel="noopener" style="color:inherit;">Coffer</a>') : 'Coffer')
+        + '</span>')
       : '';
     const nameCell = '<button class="ing-name-btn" data-' + prefix + '-idx="' + idx + '">' + r.name + '</button>' + treasureBadge;
     let row;
@@ -1672,6 +1713,7 @@ async function lookupItem(){
 
     lookupUI.setStage('recipe');
     const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json', lookupUI.log);
+    itemData.item.__partials = itemData.partials || [];
     renderItemLookup(itemData.item);
     lookupUI.log('Done.');
     addRecent('lycaas_recent_lookup', { name: itemData.item.name, url: pageUrl });
@@ -1688,6 +1730,16 @@ async function lookupItem(){
   }
 }
 
+// Shared renderer for summarizeAcquisition()'s tag list — most tags are plain
+// text, but a "From: <coffer>" tag carries its own wiki link straight to that
+// container's page, so this makes it clickable instead of flattening it to text.
+function renderAcqTags(tags){
+  return tags.map(t => t.url
+    ? ('<span class="acq-tag"><a href="' + t.url + '" target="_blank" rel="noopener" style="color:inherit;">' + t.text + '</a></span>')
+    : ('<span class="acq-tag">' + t.text + '</span>')
+  ).join('');
+}
+
 function renderItemLookup(item){
   const tags = summarizeAcquisition(item);
   const wikiLink = wikiUrlForName(item.name);
@@ -1698,7 +1750,7 @@ function renderItemLookup(item){
     <div class="panel lookup-result">
       <h3>${item.name}</h3>
       <p class="recipe-meta">${item.tradeable ? 'Sellable on the market board' : 'Market prohibited — cannot be sold'}${item.ilvl ? (' · Item Level ' + item.ilvl) : ''}</p>
-      <div class="acq-tags">${tags.map(t=>'<span class="acq-tag">'+t+'</span>').join('')}</div>
+      <div class="acq-tags">${renderAcqTags(tags)}</div>
       <p class="acq-link" style="margin:10px 0 0;"><a href="${wikiLink}" target="_blank" rel="noopener">View on wiki →</a>${universalisPart}</p>
     </div>
   `;
@@ -1753,6 +1805,7 @@ async function lookupGlamour(){
         if (!gtId) return { name: piece.name, resolveFailed: true };
         const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json', glamourUI.log);
         const item = itemData.item;
+        item.__partials = itemData.partials || [];
         return {
           name: item.name,
           gtId,
@@ -1790,7 +1843,7 @@ function renderGlamour(items){
         <p class="acq-link" style="margin:6px 0 0;"><a href="${wikiUrlForName(item.name)}" target="_blank" rel="noopener">Search the wiki →</a></p>
       </div>`;
     }
-    const tagsHtml = item.tags.map(t=>'<span class="acq-tag">'+t+'</span>').join('');
+    const tagsHtml = renderAcqTags(item.tags);
     const wikiLink = wikiUrlForName(item.name);
     const universalisPart = item.tradeable
       ? (' &nbsp;·&nbsp; <a href="https://universalis.app/market/' + item.gtId + '" target="_blank" rel="noopener">Check on Universalis →</a>')
@@ -2042,8 +2095,9 @@ async function buildShoppingList(){
     const worldFilter = getActiveWorldFilter();
     const rows = combinedList.map(ing=>{
       const isCrystal = isCrystalName(ing.name);
-      const isTreasure = !isCrystal && !!(ing.raw && ing.raw.treasure && ing.raw.treasure.length);
-      const base = { ...ing, isTreasure, isCrystal };
+      const treasureSrc = (!isCrystal && ing.raw) ? primaryTreasureSource(ing.raw) : null;
+      const isTreasure = !!treasureSrc;
+      const base = { ...ing, isTreasure, isCrystal, treasureSrc };
       if (ing.resolveFailed || !ing.tradeable){
         return {...base, status:'prohibited', unit:null, subtotal:0};
       }
@@ -2176,8 +2230,9 @@ async function checkProfit(){
     let craftTotal = 0;
     const matRows = ingredients.map(ing=>{
       const isCrystal = isCrystalName(ing.name);
-      const isTreasure = !isCrystal && !!(ing.raw && ing.raw.treasure && ing.raw.treasure.length);
-      const base = { ...ing, isTreasure, isCrystal };
+      const treasureSrc = (!isCrystal && ing.raw) ? primaryTreasureSource(ing.raw) : null;
+      const isTreasure = !!treasureSrc;
+      const base = { ...ing, isTreasure, isCrystal, treasureSrc };
       if (ing.resolveFailed || !ing.tradeable){
         return {...base, status:'prohibited', unit:null, subtotal:0};
       }
@@ -2315,6 +2370,7 @@ async function addToWatchlist(){
     watchUI.log('Found item ID ' + gtId + '. Fetching item data...');
     const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json', watchUI.log);
     const item = itemData.item;
+    item.__partials = itemData.partials || [];
     if (!item.tradeable) throw friendlyError('"' + item.name + '" can\'t be sold on the market board — there\'s no price to watch.');
 
     const list = loadWatchlist();
@@ -2322,13 +2378,20 @@ async function addToWatchlist(){
       watchUI.log('Already on the watchlist.');
     } else {
       const isCrystal = isCrystalName(item.name);
+      // Store the resolved coffer/container as a plain {name,url} object (not
+      // just a boolean) so the watchlist badge can link to the real source —
+      // this needs to be plain, serializable data since it's saved to
+      // localStorage, not a live item reference.
+      const treasureSrc = isCrystal ? null : primaryTreasureSource(item);
       list.push({
         id: gtId, name: item.name,
         isCrystal,
-        // Crystals technically appear in Garland's "treasure" source list too (Timeworn
-        // Maps can drop them), but that's not the notable fact about a crystal — they're
-        // common catalysts, not "treasure map loot." The Crystal badge covers it instead.
-        isTreasure: !isCrystal && !!(item.treasure && item.treasure.length),
+        treasureSrc,
+        // Crystals technically appear in Garland's "treasure" source list too (any
+        // coffer, including Timeworn Map troves, can drop them), but that's not the
+        // notable fact about a crystal — they're common catalysts, not loot. The
+        // Crystal badge covers it instead.
+        isTreasure: !!treasureSrc,
         unit: null, listingWorld: null, outlier: false, typicalPrice: null, checkedAt: null
       });
       saveWatchlist(list);
@@ -2410,7 +2473,9 @@ function renderWatchlist(){
         <tbody>
           ${list.map(w => {
             const treasureBadge = w.isTreasure
-              ? '<span class="treasure-tag" title="Comes from a Treasure Map, not something you buy/craft directly.">🗺 Treasure Map</span>'
+              ? ('<span class="treasure-tag" title="Comes from opening ' + (w.treasureSrc ? w.treasureSrc.name : 'a coffer') + ' — not something you buy/craft directly.">📦 '
+                + (w.treasureSrc ? ('<a href="' + w.treasureSrc.url + '" target="_blank" rel="noopener" style="color:inherit;">Coffer</a>') : 'Coffer')
+                + '</span>')
               : '';
             const crystalBadge = w.isCrystal
               ? '<span class="treasure-tag" title="An elemental crystal — a common crafting catalyst, not a rare material.">✦ Crystal</span>'
@@ -2485,6 +2550,7 @@ function importWatchlistFile(file){
         current.push({
           id: w.id, name: w.name,
           isTreasure: !!w.isTreasure, isCrystal: !!w.isCrystal,
+          treasureSrc: (w.treasureSrc && w.treasureSrc.name && w.treasureSrc.url) ? { name: w.treasureSrc.name, url: w.treasureSrc.url } : null,
           unit: w.unit != null ? w.unit : null,
           listingWorld: w.listingWorld || null,
           outlier: !!w.outlier, typicalPrice: w.typicalPrice != null ? w.typicalPrice : null,
