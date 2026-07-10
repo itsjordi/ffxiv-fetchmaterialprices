@@ -77,9 +77,9 @@
   details.panel[open] summary::before{content:"▾ "; }
   details.panel ol{margin:12px 0 4px; padding-left:22px; line-height:1.7;}
   details.panel[open] summary{margin-bottom:4px; display:block;}
-  #logDetails summary{font-size:.8rem; color:var(--dim); font-style:italic;}
-  #logDetails{background:transparent; border:none; box-shadow:none; padding:0; margin-bottom:16px;}
-  #logDetails[open] summary{margin-bottom:8px;}
+  .tech-log-details summary{font-size:.8rem; color:var(--dim); font-style:italic;}
+  .tech-log-details{background:transparent; border:none; box-shadow:none; padding:0; margin-bottom:16px;}
+  .tech-log-details[open] summary{margin-bottom:8px;}
 
   .warn-banner{border-color:var(--bad) !important; border-width:2px !important;}
   .warn-banner p{margin:0; line-height:1.5;}
@@ -145,6 +145,17 @@
   .treasure-tag{
     display:inline-block; background:var(--paper); border:1px solid var(--accent); color:var(--accent);
     font-size:.72rem; padding:1px 7px; border-radius:10px; font-style:italic; margin-left:6px; cursor:help;
+  }
+  .price-cell{ vertical-align:top; }
+  .price-main{ font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .price-badges{
+    display:flex; justify-content:flex-end; flex-wrap:wrap; gap:4px; margin-top:5px;
+  }
+  .price-badges .outlier-tag, .price-badges .blended-tag{ margin-left:0; }
+  .section-row td{
+    padding-top:18px; padding-bottom:6px; font-weight:700; color:var(--accent);
+    text-transform:uppercase; font-size:.76rem; letter-spacing:.6px;
+    border-bottom:1px solid var(--border);
   }
 
   .lookup-result{margin-top:4px;}
@@ -217,6 +228,29 @@
     whoever gave you this to host it somewhere (GitHub Pages, etc.) instead of sending you the raw file.</p>
   </div>
 
+  <div class="panel" id="worldSettings">
+    <div class="row" style="align-items:flex-end; margin-bottom:0;">
+      <div class="field" style="max-width:200px;">
+        <label for="homeWorldSelect">Your world (Light)</label>
+        <select id="homeWorldSelect">
+          <option value="">— not set —</option>
+          <option value="Alpha">Alpha</option>
+          <option value="Lich">Lich</option>
+          <option value="Odin">Odin</option>
+          <option value="Phoenix">Phoenix</option>
+          <option value="Raiden">Raiden</option>
+          <option value="Shiva">Shiva</option>
+          <option value="Twintania">Twintania</option>
+          <option value="Zodiark">Zodiark</option>
+        </select>
+      </div>
+      <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding-bottom:9px;">
+        <input type="checkbox" id="homeWorldOnlyToggle">
+        <span class="recipe-meta" style="margin:0;">Only price what's on my world — no data-center travel</span>
+      </label>
+    </div>
+  </div>
+
   <div class="panel" id="basketBar">
     <div class="row" style="align-items:center; margin-bottom:0;">
       <button id="basketToggleBtn" class="secondary">🧺 Basket (<span id="basketCount">0</span>) <span id="basketTotal"></span></button>
@@ -238,6 +272,7 @@
     <button class="tab-btn" id="tabBtnShopping">Shopping List</button>
     <button class="tab-btn" id="tabBtnProfit">Profit Calc</button>
     <button class="tab-btn" id="tabBtnWatch">Watchlist</button>
+    <button class="tab-btn" id="tabBtnGlamour">Glamour</button>
   </div>
 
   <div id="tabCraft" class="tab-panel">
@@ -300,7 +335,9 @@
       </details>
     </div>
 
-    <details id="logDetails">
+    <div id="craftSuggestions" class="recent-strip hidden"></div>
+
+    <details id="logDetails" class="tech-log-details">
       <summary>Technical log (for the curious, or for Lycaa)</summary>
       <pre id="log"></pre>
     </details>
@@ -339,7 +376,9 @@
       </details>
     </div>
 
-    <details id="lookupLogDetails">
+    <div id="lookupSuggestions" class="recent-strip hidden"></div>
+
+    <details id="lookupLogDetails" class="tech-log-details">
       <summary>Technical log (for the curious, or for Lycaa)</summary>
       <pre id="lookupLog"></pre>
     </details>
@@ -373,7 +412,7 @@
       </details>
     </div>
 
-    <details id="shoppingLogDetails">
+    <details id="shoppingLogDetails" class="tech-log-details">
       <summary>Technical log (for the curious, or for Lycaa)</summary>
       <pre id="shoppingLog"></pre>
     </details>
@@ -413,7 +452,9 @@
       </details>
     </div>
 
-    <details id="profitLogDetails">
+    <div id="profitSuggestions" class="recent-strip hidden"></div>
+
+    <details id="profitLogDetails" class="tech-log-details">
       <summary>Technical log (for the curious, or for Lycaa)</summary>
       <pre id="profitLog"></pre>
     </details>
@@ -434,6 +475,13 @@
         <button id="watchAddBtn">Add to watchlist</button>
         <button id="watchRecheckBtn" class="secondary">Recheck all prices</button>
       </div>
+      <div class="row">
+        <button id="watchExportBtn" class="secondary">Export watchlist</button>
+        <button id="watchImportBtn" class="secondary">Import watchlist</button>
+        <input type="file" id="watchImportFile" accept="application/json,.json" class="hidden">
+        <span id="watchImportConfirm" class="copy-confirm hidden">Imported.</span>
+      </div>
+      <p class="recipe-meta" style="margin-bottom:0;">Your watchlist only lives in this browser — clearing cookies/site data wipes it. Export a backup file now and then, or before switching browsers.</p>
     </div>
 
     <div id="watchFriendlyStatus" class="friendly-status hidden">
@@ -453,11 +501,55 @@
       </details>
     </div>
 
-    <details id="watchLogDetails">
+    <div id="watchSuggestions" class="recent-strip hidden"></div>
+
+    <details id="watchLogDetails" class="tech-log-details">
       <summary>Technical log (for the curious, or for Lycaa)</summary>
       <pre id="watchLog"></pre>
     </details>
     <div id="watchResults"></div>
+  </div>
+
+  <div id="tabGlamour" class="tab-panel hidden">
+    <div class="panel">
+      <p class="recipe-meta" style="margin-top:0;">Paste a glamour page link from
+      <a href="https://ffxiv.eorzeacollection.com" target="_blank" rel="noopener">Eorzea Collection</a>
+      and the slave will find every equipment/weapon piece on it, check how each is obtained, and let you jump
+      straight into pricing the craftable ones.</p>
+      <div class="row">
+        <div class="field">
+          <label for="glamourInput">Eorzea Collection glamour URL</label>
+          <input type="text" id="glamourInput" placeholder="https://ffxiv.eorzeacollection.com/glamour/346028/purple-and-grey-wizard">
+        </div>
+      </div>
+      <div class="row">
+        <button id="glamourBtn">Look up glamour</button>
+      </div>
+      <div id="recentGlamour" class="recent-strip hidden"></div>
+    </div>
+
+    <div id="glamourFriendlyStatus" class="friendly-status hidden">
+      <span class="spinner-emoji">🪙</span>
+      <span id="glamourFriendlyText">Thinking...</span>
+    </div>
+
+    <div id="glamourErrorCard" class="panel error-card hidden">
+      <p class="funny-line" id="glamourErrorFunny"></p>
+      <div class="row">
+        <button id="glamourCopyErrorBtn" class="secondary">Copy error for Lycaa</button>
+        <span id="glamourCopyConfirm" class="copy-confirm hidden">Copied. Go forth.</span>
+      </div>
+      <details>
+        <summary style="cursor:pointer; color:var(--dim); font-style:italic; font-size:.8rem;">Technical details</summary>
+        <pre id="glamourErrorTech" style="white-space:pre-wrap; font-size:.78rem; color:var(--dim); margin-top:8px;"></pre>
+      </details>
+    </div>
+
+    <details id="glamourLogDetails" class="tech-log-details">
+      <summary>Technical log (for the curious, or for Lycaa)</summary>
+      <pre id="glamourLog"></pre>
+    </details>
+    <div id="glamourResults"></div>
   </div>
 
   <p class="footer-note" id="footerNote">the slave fetches; the slave does not explain itself.</p>
@@ -473,8 +565,49 @@ if (location.protocol === 'file:'){
   document.getElementById('fileWarning').classList.remove('hidden');
 }
 
+// --- Home world: prices default to the cheapest anywhere in the Light data
+// center (which can mean traveling to another world to actually buy it).
+// A visitor can optionally pin a home world and flip a switch to restrict
+// every price on the page to just that world instead. ---
+function loadWorldSettings(){
+  return {
+    homeWorld: localStorage.getItem('lycaas_home_world') || '',
+    homeOnly: localStorage.getItem('lycaas_home_world_only') === '1'
+  };
+}
+function saveWorldSettings(homeWorld, homeOnly){
+  localStorage.setItem('lycaas_home_world', homeWorld || '');
+  localStorage.setItem('lycaas_home_world_only', homeOnly ? '1' : '0');
+}
+// Returns the world name to restrict pricing to, or null for "whole data center."
+function getActiveWorldFilter(){
+  const s = loadWorldSettings();
+  return (s.homeOnly && s.homeWorld) ? s.homeWorld : null;
+}
+(function initWorldSettings(){
+  const s = loadWorldSettings();
+  document.getElementById('homeWorldSelect').value = s.homeWorld;
+  document.getElementById('homeWorldOnlyToggle').checked = s.homeOnly;
+})();
+document.getElementById('homeWorldSelect').addEventListener('change', ()=>{
+  const world = document.getElementById('homeWorldSelect').value;
+  const onlyToggle = document.getElementById('homeWorldOnlyToggle');
+  if (!world) onlyToggle.checked = false;
+  saveWorldSettings(world, onlyToggle.checked);
+});
+document.getElementById('homeWorldOnlyToggle').addEventListener('change', ()=>{
+  const world = document.getElementById('homeWorldSelect').value;
+  const toggle = document.getElementById('homeWorldOnlyToggle');
+  if (toggle.checked && !world){
+    alert('Pick your world first.');
+    toggle.checked = false;
+    return;
+  }
+  saveWorldSettings(world, toggle.checked);
+});
+
 // --- Tabs ---
-const TAB_IDS = ['craft', 'lookup', 'shopping', 'profit', 'watch'];
+const TAB_IDS = ['craft', 'lookup', 'shopping', 'profit', 'watch', 'glamour'];
 function showTab(tab){
   TAB_IDS.forEach(t => {
     document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('hidden', t !== tab);
@@ -486,6 +619,7 @@ document.getElementById('tabBtnLookup').addEventListener('click', ()=>showTab('l
 document.getElementById('tabBtnShopping').addEventListener('click', ()=>showTab('shopping'));
 document.getElementById('tabBtnProfit').addEventListener('click', ()=>showTab('profit'));
 document.getElementById('tabBtnWatch').addEventListener('click', ()=>showTab('watch'));
+document.getElementById('tabBtnGlamour').addEventListener('click', ()=>showTab('glamour'));
 
 // Used for JSON APIs (Garland Tools, Universalis) — no "reader" services here since
 // those reformat content and would break JSON.parse.
@@ -514,6 +648,7 @@ const STAGE_MESSAGES = {
   recipe:      ['Asking Garland Tools nicely for the recipe...', 'Rummaging through the crafting logs...', 'Consulting the ancient archives...'],
   ingredients: ['Chasing down what these mats are even called...', 'Interrogating the ingredients one by one...', 'Reading tiny item labels...'],
   prices:      ['Storming the Market Board...', 'Haggling with retainers...', 'Counting gil (badly, with its paws)...', 'Checking every world\'s price tags...'],
+  glamour:     ['Squinting at screenshots...', 'Matching pixels to actual items...', 'Cross-referencing every piece with the wiki...'],
 };
 
 const FUNNY_ERROR_LINES = [
@@ -523,6 +658,23 @@ const FUNNY_ERROR_LINES = [
   "The slave went to fetch prices and came back with nothing but excuses.",
   "Somewhere, a server said 'no.' The slave took it personally.",
 ];
+
+// Simple, already-plain-English situations (empty basket, no exact match, not
+// craftable, etc.) get shown directly instead of hidden behind "Technical
+// details" — there's nothing technical to hide. Still gets a bit of random
+// flavor up front so it doesn't read like a dry system message.
+const FRIENDLY_ERROR_INTROS = [
+  "Hold on —",
+  "Uh, one thing —",
+  "The slave pauses.",
+  "Not so fast.",
+  "Small snag:",
+  "Quick heads up —",
+  "The slave clears its throat.",
+];
+function friendlyError(message){
+  return Object.assign(new Error(message), { friendly: true });
+}
 
 // Each tab (Craft Cost / Item Lookup) gets its own independent set of these —
 // so an error or a "still thinking" spinner from one search never lingers
@@ -557,10 +709,17 @@ function createUI(ids){
   }
   function showError(err){
     document.getElementById(ids.errorCard).classList.remove('hidden');
-    document.getElementById(ids.errorFunny).textContent =
-      FUNNY_ERROR_LINES[Math.floor(Math.random() * FUNNY_ERROR_LINES.length)];
     document.getElementById(ids.errorTech).textContent = err.message;
-    document.getElementById(ids.logDetails).open = true;
+    if (err && err.friendly){
+      // The real reason is already plain English — show it up front instead of
+      // making someone click "Technical details" to find out their basket's empty.
+      const intro = FRIENDLY_ERROR_INTROS[Math.floor(Math.random() * FRIENDLY_ERROR_INTROS.length)];
+      document.getElementById(ids.errorFunny).textContent = intro + ' ' + err.message;
+    } else {
+      document.getElementById(ids.errorFunny).textContent =
+        FUNNY_ERROR_LINES[Math.floor(Math.random() * FUNNY_ERROR_LINES.length)];
+      document.getElementById(ids.logDetails).open = true;
+    }
   }
   function hideError(){
     document.getElementById(ids.errorCard).classList.add('hidden');
@@ -606,12 +765,18 @@ const watchUI = createUI({
   errorCard:'watchErrorCard', errorFunny:'watchErrorFunny', errorTech:'watchErrorTech', logDetails:'watchLogDetails',
   copyErrorBtn:'watchCopyErrorBtn', copyConfirm:'watchCopyConfirm'
 });
+const glamourUI = createUI({
+  log:'glamourLog', friendlyStatus:'glamourFriendlyStatus', friendlyText:'glamourFriendlyText',
+  errorCard:'glamourErrorCard', errorFunny:'glamourErrorFunny', errorTech:'glamourErrorTech', logDetails:'glamourLogDetails',
+  copyErrorBtn:'glamourCopyErrorBtn', copyConfirm:'glamourCopyConfirm'
+});
 // Clear a tab's error card the instant its input changes — a stale error card
 // sitting there while you type a totally different item looks like a bug.
-document.getElementById('wikiUrl').addEventListener('input', ()=>craftUI.hideError());
-document.getElementById('lookupInput').addEventListener('input', ()=>lookupUI.hideError());
-document.getElementById('profitInput').addEventListener('input', ()=>profitUI.hideError());
-document.getElementById('watchInput').addEventListener('input', ()=>watchUI.hideError());
+document.getElementById('wikiUrl').addEventListener('input', ()=>{ craftUI.hideError(); clearSuggestions('craftSuggestions'); });
+document.getElementById('lookupInput').addEventListener('input', ()=>{ lookupUI.hideError(); clearSuggestions('lookupSuggestions'); });
+document.getElementById('profitInput').addEventListener('input', ()=>{ profitUI.hideError(); clearSuggestions('profitSuggestions'); });
+document.getElementById('watchInput').addEventListener('input', ()=>{ watchUI.hideError(); clearSuggestions('watchSuggestions'); });
+document.getElementById('glamourInput').addEventListener('input', ()=>glamourUI.hideError());
 
 async function fetchViaProxies(url, proxies, logFn, timeoutMs){
   // Race every route in parallel instead of one-at-a-time — a sequential chain of
@@ -703,6 +868,66 @@ function extractGarlandId(html){
   return m ? m[1] : null;
 }
 
+// Eorzea Collection glamour pages link every equipped piece (armor and
+// weapon alike) straight to its official Lodestone item page — that's a
+// stable pattern regardless of the surrounding layout/CSS, so this just
+// grabs every such link's visible name, in page order, deduped. It doesn't
+// try to detect which slot (head/body/weapon/etc.) each piece is in since
+// that markup isn't guaranteed — the piece list itself is what matters here.
+function extractEorzeaGear(html){
+  const results = [];
+  const seen = new Set();
+  const linkRe = /<a[^>]+href="(https?:\/\/[a-z]{2}\.finalfantasyxiv\.com\/lodestone\/playguide\/db\/item\/[a-f0-9]+)"[^>]*>([^<]+)<\/a>/gi;
+  let m;
+  while ((m = linkRe.exec(html))){
+    const name = m[2].trim();
+    if (name && !seen.has(name)){
+      seen.add(name);
+      results.push({ name, lodestoneUrl: m[1] });
+    }
+  }
+  return results;
+}
+
+// Asks the wiki's own search suggestions — the same MediaWiki "OpenSearch" API
+// that powers the autocomplete/"did you mean" list on the wiki's own search box
+// — for anything close to a typo'd or half-remembered item name. Returns a
+// plain JSON array, so it goes through the same JSON proxy chain as Garland/
+// Universalis instead of needing HTML scraping.
+async function fetchWikiSuggestions(query, logFn){
+  try{
+    const url = 'https://ffxiv.consolegameswiki.com/mediawiki/api.php?action=opensearch&format=json&limit=6&search=' + encodeURIComponent(query);
+    const data = await fetchJson(url, logFn);
+    const titles = (data && data[1]) || [];
+    const urls = (data && data[3]) || [];
+    return titles.map((title, i) => ({ name: title, url: urls[i] || wikiUrlForName(title) }));
+  }catch(e){
+    return [];
+  }
+}
+
+// Renders a row of clickable "did you mean" chips (reuses the Recent-search
+// pill styling) into any of the per-tab suggestion slots.
+function renderSuggestions(containerId, suggestions, onPick){
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!suggestions || !suggestions.length){
+    el.innerHTML = '';
+    el.classList.add('hidden');
+    return;
+  }
+  el.classList.remove('hidden');
+  el.innerHTML = '<span class="recent-label">Did you mean:</span> ' +
+    suggestions.map((s, idx) => '<button class="recent-chip" data-sug-idx="' + idx + '">' + s.name + '</button>').join('');
+  el.querySelectorAll('.recent-chip').forEach(btn=>{
+    btn.addEventListener('click', ()=> onPick(suggestions[parseInt(btn.dataset.sugIdx, 10)]));
+  });
+}
+function clearSuggestions(containerId){
+  const el = document.getElementById(containerId);
+  if (el){ el.innerHTML = ''; el.classList.add('hidden'); }
+}
+
 // When an item has no crafting recipe, peek at the wiki's own "Acquisition"
 // section (already fetched, no extra request needed) to say *how* it's actually
 // obtained instead of just "there's no recipe."
@@ -734,13 +959,15 @@ async function lookupRecipe(){
   document.getElementById('results').innerHTML = '';
   craftUI.hideError();
   craftUI.clearLog();
+  clearSuggestions('craftSuggestions');
   const btn = document.getElementById('lookupBtn');
   btn.disabled = true;
   try{
+    const isUrlInput = /^https?:\/\//i.test(urlInput);
     let pageUrl;
-    if (/^https?:\/\//i.test(urlInput)){
+    if (isUrlInput){
       try{ pageUrl = new URL(urlInput).toString(); }
-      catch(e){ throw new Error('That doesn\'t look like a valid URL.'); }
+      catch(e){ throw friendlyError('That doesn\'t look like a valid URL.'); }
     } else {
       pageUrl = wikiUrlForName(urlInput);
     }
@@ -750,7 +977,20 @@ async function lookupRecipe(){
     const html = await fetchHtml(pageUrl, craftUI.log);
 
     const gtId = extractGarlandId(html);
-    if (!gtId) throw new Error('Could not find a market/item link on that page. Try the exact wiki spelling, or paste the full wiki URL instead.');
+    if (!gtId){
+      if (!isUrlInput){
+        craftUI.log('No direct match — checking the wiki\'s own search suggestions...');
+        const suggestions = await fetchWikiSuggestions(urlInput, craftUI.log);
+        if (suggestions.length){
+          renderSuggestions('craftSuggestions', suggestions, (s)=>{
+            document.getElementById('wikiUrl').value = s.name;
+            lookupRecipe();
+          });
+          throw friendlyError('Couldn\'t find an exact match for "' + urlInput + '". Try one of the suggestions above, or check the spelling.');
+        }
+      }
+      throw friendlyError('Could not find a market/item link on that page. Try the exact wiki spelling, or paste the full wiki URL instead.');
+    }
     craftUI.log('Found item ID ' + gtId + '. Fetching recipe data from Garland Tools...');
 
     craftUI.setStage('recipe');
@@ -762,7 +1002,7 @@ async function lookupRecipe(){
       const how = methods
         ? ('It looks like it\'s actually obtained via ' + methods.join(', ') + ' — not crafted, so there\'s nothing here to price.')
         : 'It has no crafting recipe on record, so there\'s nothing here to price.';
-      throw new Error('"' + name + '" isn\'t a craftable item. ' + how);
+      throw friendlyError('"' + name + '" isn\'t a craftable item. ' + how);
     }
     resolvedItem = {name, gtId, crafts};
 
@@ -834,19 +1074,27 @@ function median(arr){
   return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid-1] + sorted[mid]) / 2;
 }
 
-// Picks a realistic price for buying `neededQty` units of something, instead of
-// just multiplying the single cheapest listing's unit price by the quantity —
-// you can't buy more than what a listing actually has stacked up for sale at
-// that price. Walks listings cheapest-first, filling the order from each one's
-// actual stock, and extrapolates with the priciest listing we saw if supply
-// runs short. Also flags when the cheapest listing looks like a one-off fluke:
-// a listing of just a unit or two priced far below everything else on the
-// board, and when the order had to "spill over" into pricier listings because
-// the cheapest one alone didn't have enough (`blended`), so a UI can show the
-// real per-listing breakdown instead of a single misleading unit price.
-function priceForQuantity(priceEntry, neededQty){
+// Picks a realistic price for buying `neededQty` units of something. Two
+// things the market board actually does that a naive "cheapest unit price ×
+// quantity" calculation ignores:
+//   1. A listing is a whole lot — you can't split it. If the cheapest
+//      listing has 8 up for sale and you only need 3, you still have to buy
+//      all 8 and pay for all 8.
+//   2. If you need more than one listing can cover, you buy whole lots from
+//      the next-cheapest listings too until you have enough (or more).
+// So this walks listings cheapest-first, buying each ENTIRE lot it draws
+// from, and stops once it's covered (or exceeded) what's needed. It also
+// tracks the actual quantity you end up owning (which can be more than you
+// asked for), and flags when the cheapest listing looks like a one-off
+// fluke: a listing of just a unit or two priced far below everything else.
+function priceForQuantity(priceEntry, neededQty, worldFilter){
   if (!priceEntry || !priceEntry.listings || priceEntry.listings.length === 0) return null;
-  const sorted = priceEntry.listings.slice().sort((a,b)=>a.pricePerUnit - b.pricePerUnit);
+  // Buying from another world in the same data center means actually traveling
+  // there — if a home world is set and "home world only" is on, restrict to
+  // just that world's listings instead of the whole data center.
+  const pool = worldFilter ? priceEntry.listings.filter(l => l.worldName === worldFilter) : priceEntry.listings;
+  if (!pool.length) return null;
+  const sorted = pool.slice().sort((a,b)=>a.pricePerUnit - b.pricePerUnit);
   const cheapest = sorted[0];
 
   let outlier = false;
@@ -861,20 +1109,25 @@ function priceForQuantity(priceEntry, neededQty){
 
   let remaining = neededQty;
   let total = 0;
+  let acquiredQty = 0;
   const listingsUsed = [];
   for (const listing of sorted){
     if (remaining <= 0) break;
-    const take = Math.min(remaining, listing.quantity || 1);
-    total += take * listing.pricePerUnit;
-    remaining -= take;
-    listingsUsed.push({ qty: take, price: listing.pricePerUnit, worldName: listing.worldName, hq: listing.hq });
+    const lotQty = listing.quantity || 1;
+    // Whole lot, every time — no buying "3 out of an 8-stack."
+    total += lotQty * listing.pricePerUnit;
+    acquiredQty += lotQty;
+    remaining -= lotQty;
+    listingsUsed.push({ qty: lotQty, price: listing.pricePerUnit, worldName: listing.worldName, hq: listing.hq });
   }
   if (remaining > 0){
     // Ran out of listed stock — extrapolate the rest at the priciest listing seen,
     // which is a more honest guess than assuming infinite stock at the cheapest price.
     const worst = sorted[sorted.length - 1];
-    total += remaining * worst.pricePerUnit;
-    listingsUsed.push({ qty: remaining, price: worst.pricePerUnit, worldName: worst.worldName, hq: worst.hq, extrapolated: true });
+    const lotQty = remaining;
+    total += lotQty * worst.pricePerUnit;
+    acquiredQty += lotQty;
+    listingsUsed.push({ qty: lotQty, price: worst.pricePerUnit, worldName: worst.worldName, hq: worst.hq, extrapolated: true });
   }
 
   return {
@@ -884,9 +1137,60 @@ function priceForQuantity(priceEntry, neededQty){
     total,
     outlier,
     typicalPrice,
+    // "blended" = had to draw from more than one listing to cover the need.
     blended: listingsUsed.length > 1,
+    // "overbuy" = a single lot's size already exceeds what's needed (e.g. a
+    // listing of 8 when only 3 are needed) — you're paying for extras either way.
+    overbuy: listingsUsed.length === 1 && acquiredQty > neededQty,
+    acquiredQty,
     listingsUsed
   };
+}
+
+// Elemental crystals (Fire/Ice/Wind/Earth/Lightning/Water × Shard/Crystal/
+// Cluster) are a fixed, well-known set of 18 items that show up in nearly
+// every recipe — usually cheap or free, and conceptually a different kind of
+// "ingredient" than an actual crafted/gathered material. They get split into
+// their own section in the ingredient tables (their gil still counts toward
+// the total, they're just visually separated).
+const CRYSTAL_ELEMENTS = ['Fire','Ice','Wind','Earth','Lightning','Water'];
+const CRYSTAL_TIERS = ['Shard','Crystal','Cluster'];
+function isCrystalName(name){
+  return CRYSTAL_ELEMENTS.some(el => CRYSTAL_TIERS.some(t => name === (el + ' ' + t)));
+}
+
+// Builds the "unit price" column's whole <td> for an ingredient row. A
+// listing is a lot you can't split — if the cheapest one has 8 up for sale
+// and you only need 3, you still buy (and pay for) all 8, and if that's not
+// enough on its own, the next-cheapest lot gets bought whole too. So
+// whenever that happened, this spells out exactly what got bought — e.g.
+// "3,000g×8 = 24,000g" — instead of a flat unit price that would understate
+// the real cost. Any "fluke"/"multiple lots" badges render on their own line
+// below the price instead of crammed next to the gil amount.
+function buildPriceCell(r){
+  const hqTag = r.hq ? ' (HQ)' : '';
+  let mainText;
+  if ((r.blended || r.overbuy) && r.listingsUsed && r.listingsUsed.length){
+    const formula = r.listingsUsed.map(l => fmt(l.price) + 'g×' + l.qty).join(' + ');
+    mainText = formula + ' = ' + fmt(r.subtotal) + 'g';
+  } else {
+    mainText = fmt(r.unit) + 'g' + hqTag;
+  }
+
+  const badges = [];
+  if (r.outlier){
+    badges.push('<span class="outlier-tag" title="Only a unit or two listed at this price — the rest of the board is pricier. Click the name for details.">⚠ fluke?</span>');
+  }
+  if (r.blended){
+    badges.push('<span class="blended-tag" title="Needed more than one listing to cover ' + r.amount + ' — a listing can\'t be split, so this buys a whole lot from each one used.">multiple lots</span>');
+  } else if (r.overbuy){
+    badges.push('<span class="blended-tag" title="That listing is a lot of ' + r.acquiredQty + ' — you can\'t buy just ' + r.amount + ' out of it, so this pays for the whole lot.">buys ' + r.acquiredQty + '</span>');
+  }
+
+  return '<td class="num price-cell">'
+    + '<div class="price-main">' + mainText + '</div>'
+    + (badges.length ? ('<div class="price-badges">' + badges.join('') + '</div>') : '')
+    + '</td>';
 }
 
 // Cost to craft the amount of an ingredient the recipe actually calls for,
@@ -894,7 +1198,7 @@ function priceForQuantity(priceEntry, neededQty){
 // Returns null if any required sub-ingredient can't be priced (so the
 // comparison can't be made honestly), otherwise {total, breakdown:[...]}
 // with one breakdown row per sub-ingredient for the itemized table.
-function computeCraftCost(ing, priceResult){
+function computeCraftCost(ing, priceResult, worldFilter){
   if (!ing.subIngredients) return null;
   let total = 0;
   const breakdown = [];
@@ -904,12 +1208,13 @@ function computeCraftCost(ing, priceResult){
     // Sub-ingredient amount is "per unit of ing" — scale by how many units of
     // ing the recipe actually needs.
     const neededTotal = sub.amount * ing.amount;
-    const priced = priceForQuantity(priceResult.items[sub.id], neededTotal);
+    const priced = priceForQuantity(priceResult.items[sub.id], neededTotal, worldFilter);
     if (!priced) return null;
     total += priced.total;
     breakdown.push({
       name: sub.name, amount: neededTotal, unit: priced.unit,
-      subtotal: priced.total, outlier: priced.outlier, blended: priced.blended
+      subtotal: priced.total, outlier: priced.outlier, blended: priced.blended,
+      overbuy: priced.overbuy, acquiredQty: priced.acquiredQty, listingsUsed: priced.listingsUsed
     });
   }
   return { total, breakdown };
@@ -965,10 +1270,16 @@ async function getPrices(){
       throw new Error('Universalis lookup failed for the ' + world + ' data center. (' + e.message + ')');
     }
 
+    const worldFilter = getActiveWorldFilter();
     const rows = currentIngredients.map(ing=>{
-      const craftCost = computeCraftCost(ing, priceResult);
-      const isTreasure = !!(ing.raw && ing.raw.treasure && ing.raw.treasure.length);
-      const base = { ...ing, craftCost, isTreasure };
+      const craftCost = computeCraftCost(ing, priceResult, worldFilter);
+      const isCrystal = isCrystalName(ing.name);
+      // Crystals technically show up in Garland's "treasure" source list too (they're
+      // among the many things Timeworn Maps can drop), but that's not the interesting
+      // fact about a crystal — they're mainly cheap/common catalysts, not a "treasure
+      // map item." The Crystal section already tells that story better.
+      const isTreasure = !isCrystal && !!(ing.raw && ing.raw.treasure && ing.raw.treasure.length);
+      const base = { ...ing, craftCost, isTreasure, isCrystal };
       if (ing.resolveFailed){
         return {...base, status:'prohibited', unit:null, subtotal:0};
       }
@@ -978,8 +1289,10 @@ async function getPrices(){
       if (priceResult.unresolved.includes(ing.id) || priceResult.unresolved.includes(String(ing.id)) || !priceResult.items[ing.id]){
         return {...base, status:'prohibited', unit:null, subtotal:0};
       }
-      const priced = priceForQuantity(priceResult.items[ing.id], ing.amount);
+      const priced = priceForQuantity(priceResult.items[ing.id], ing.amount, worldFilter);
       if (!priced){
+        const hasAnyListings = !!(priceResult.items[ing.id] && priceResult.items[ing.id].listings && priceResult.items[ing.id].listings.length);
+        if (worldFilter && hasAnyListings) return {...base, status:'nohomeworld', unit:null, subtotal:0};
         return {...base, status:'nolistings', unit:null, subtotal:0};
       }
       return {
@@ -992,6 +1305,8 @@ async function getPrices(){
         outlier: priced.outlier,
         typicalPrice: priced.typicalPrice,
         blended: priced.blended,
+        overbuy: priced.overbuy,
+        acquiredQty: priced.acquiredQty,
         listingsUsed: priced.listingsUsed
       };
     });
@@ -1025,12 +1340,13 @@ function renderAcquisitionDetail(row){
   }
 
   let listingsHtml = '';
-  if (row.status === 'ok' && row.blended && row.listingsUsed && row.listingsUsed.length > 1){
-    listingsHtml = '<p class="recipe-meta" style="margin:0 0 8px;">'
-      + 'The cheapest listing didn\'t have ' + row.amount + ' in stock, so the total actually blends multiple listings:'
-      + '</p>'
+  if (row.status === 'ok' && (row.blended || row.overbuy) && row.listingsUsed && row.listingsUsed.length){
+    const explain = row.blended
+      ? ('The cheapest listing didn\'t have ' + row.amount + ' in stock, and listings can\'t be split, so this buys whole lots from more than one:')
+      : ('That listing is a lot of ' + row.acquiredQty + ' — you can\'t buy just ' + row.amount + ' out of it, so this buys (and pays for) the whole lot:');
+    listingsHtml = '<p class="recipe-meta" style="margin:0 0 8px;">' + explain + '</p>'
       + '<table class="mini-table"><thead><tr>'
-      + '<th>Listing</th><th class="num">Qty used</th><th class="num">Price</th><th class="num">Subtotal</th>'
+      + '<th>Listing</th><th class="num">Lot size</th><th class="num">Price</th><th class="num">Subtotal</th>'
       + '</tr></thead><tbody>'
       + row.listingsUsed.map(l => (
           '<tr><td>' + l.worldName + (l.hq ? ' (HQ)' : '') + (l.extrapolated ? ' <i>(estimated — ran out of listings)</i>' : '') + '</td>'
@@ -1038,7 +1354,10 @@ function renderAcquisitionDetail(row){
           + '<td class="num">' + fmt(l.price) + 'g</td>'
           + '<td class="num">' + fmt(l.qty * l.price) + 'g</td></tr>'
         )).join('')
-      + '</tbody></table>';
+      + '</tbody></table>'
+      + (row.acquiredQty > row.amount
+          ? ('<p class="recipe-meta" style="margin:6px 0 0;">You needed ' + row.amount + ' but end up with ' + row.acquiredQty + ' — the extra ' + (row.acquiredQty - row.amount) + ' comes along for free since it\'s the same lot.</p>')
+          : '');
   }
 
   let compareHtml = '';
@@ -1061,15 +1380,18 @@ function renderAcquisitionDetail(row){
     compareHtml += '<table class="mini-table"><thead><tr>'
       + '<th>Sub-ingredient</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Subtotal</th>'
       + '</tr></thead><tbody>'
-      + row.craftCost.breakdown.map(b => (
-          '<tr><td>' + b.name
-            + (b.outlier ? ' <span class="outlier-tag" title="Cheapest listing looks like a fluke — only a unit or two at that price.">⚠</span>' : '')
-            + (b.blended ? ' <span class="blended-tag" title="Blends multiple listings — the cheapest one alone didn\'t have enough in stock.">multi</span>' : '')
-            + '</td>'
-          + '<td class="num">' + b.amount + '</td>'
-          + '<td class="num">' + fmt(b.unit) + 'g</td>'
-          + '<td class="num">' + fmt(b.subtotal) + 'g</td></tr>'
-        )).join('')
+      + row.craftCost.breakdown.map(b => {
+          const nameBadges = []
+            .concat(b.outlier ? ['<span class="outlier-tag" title="Cheapest listing looks like a fluke — only a unit or two at that price.">⚠ fluke?</span>'] : [])
+            .concat((b.blended || b.overbuy) ? ['<span class="blended-tag" title="A listing is a whole lot — you can\'t buy part of it.">' + (b.blended ? 'multiple lots' : ('buys ' + b.acquiredQty)) + '</span>'] : []);
+          const unitCell = (b.blended || b.overbuy) && b.listingsUsed && b.listingsUsed.length
+            ? b.listingsUsed.map(l => fmt(l.price) + 'g×' + l.qty).join(' + ')
+            : (fmt(b.unit) + 'g');
+          return '<tr><td>' + b.name + (nameBadges.length ? ('<div class="price-badges" style="justify-content:flex-start; margin-top:3px;">' + nameBadges.join('') + '</div>') : '') + '</td>'
+            + '<td class="num">' + b.amount + '</td>'
+            + '<td class="num">' + unitCell + '</td>'
+            + '<td class="num">' + fmt(b.subtotal) + 'g</td></tr>';
+        }).join('')
       + '</tbody></table>';
   }
 
@@ -1086,23 +1408,24 @@ function renderAcquisitionDetail(row){
     + '</p>';
 }
 
-// Tracks the most recently priced result, so the "Add to basket" button up in
-// the recipe panel (which fires before the results table even exists on the
-// very first click) can still grab a real cost instead of always adding a
-// "not priced" entry.
-let lastResultsInfo = null;
-
-function renderResults(itemName, recipe, world, rows){
-  const jobName = JOB_NAMES[recipe.job] || ('Job ' + recipe.job);
+// Builds the <tbody> rows for an ingredient table shared by the Craft Cost,
+// Shopping List, and Profit Calc tabs — splits elemental crystals into their
+// own section (still counted in the total) and renders each row's price
+// cell via buildPriceCell so the "fluke"/"multiple lots" badges always look
+// consistent. `prefix` namespaces the data-*-idx attributes so three of
+// these tables can coexist in the same page without index collisions.
+function renderIngredientRows(rows, prefix, world){
   let total = 0;
   let anyProhibited = false;
   let anyNoListings = false;
+  let runningIdx = 0;
 
-  const bodyRows = rows.map((r, idx)=>{
+  function buildRow(r){
+    const idx = runningIdx++;
     const treasureBadge = r.isTreasure
       ? '<span class="treasure-tag" title="Comes from a Treasure Map, not something you buy/craft directly — these tend to be pricey and slow to get.">🗺 Treasure Map</span>'
       : '';
-    const nameCell = '<button class="ing-name-btn" data-idx="' + idx + '">' + r.name + '</button>' + treasureBadge;
+    const nameCell = '<button class="ing-name-btn" data-' + prefix + '-idx="' + idx + '">' + r.name + '</button>' + treasureBadge;
     let row;
     if (r.status === 'prohibited'){
       anyProhibited = true;
@@ -1118,26 +1441,60 @@ function renderResults(itemName, recipe, world, rows){
         <td class="num">${r.amount}</td>
         <td colspan="3" class="nolistings">No current listings on ${world}</td>
       </tr>`;
-    } else {
-      total += r.subtotal;
-      const outlierBadge = r.outlier
-        ? '<span class="outlier-tag" title="Only a unit or two listed at this price — the rest of the board is pricier. Click the name for details.">⚠ fluke?</span>'
-        : '';
-      const blendedBadge = r.blended
-        ? '<span class="blended-tag" title="The cheapest listing didn\'t have enough in stock for all ' + r.amount + ' — this total blends multiple listings. Click the name for the breakdown.">multiple listings</span>'
-        : '';
+    } else if (r.status === 'nohomeworld'){
+      anyNoListings = true;
       row = `<tr>
         <td>${nameCell}</td>
         <td class="num">${r.amount}</td>
-        <td class="num">${fmt(r.unit)}g ${r.hq ? '(HQ)' : ''} ${outlierBadge}${blendedBadge}</td>
+        <td colspan="3" class="nolistings">Nothing on your world right now — it's available elsewhere in ${world}</td>
+      </tr>`;
+    } else {
+      total += r.subtotal;
+      row = `<tr>
+        <td>${nameCell}</td>
+        <td class="num">${r.amount}</td>
+        ${buildPriceCell(r)}
         <td class="world-tag">${r.listingWorld}</td>
         <td class="num">${fmt(r.subtotal)}g</td>
       </tr>`;
     }
-    const detail = '<tr class="ing-detail-row hidden" data-detail-idx="' + idx + '"><td colspan="5">'
-      + renderAcquisitionDetail(r) + '</td></tr>';
+    const usedByHtml = r.usedBy ? ('<p class="recipe-meta" style="margin:0 0 8px;">Needed for: ' + r.usedBy.join(', ') + '</p>') : '';
+    const detail = '<tr class="ing-detail-row hidden" data-' + prefix + '-detail-idx="' + idx + '"><td colspan="5">'
+      + usedByHtml + renderAcquisitionDetail(r) + '</td></tr>';
     return row + detail;
-  }).join('');
+  }
+
+  const normalRows = rows.filter(r => !r.isCrystal);
+  const crystalRows = rows.filter(r => r.isCrystal);
+  let bodyHtml = normalRows.map(buildRow).join('');
+  if (crystalRows.length){
+    bodyHtml += '<tr class="section-row"><td colspan="5">Crystals</td></tr>' + crystalRows.map(buildRow).join('');
+  }
+
+  return { bodyHtml, total, anyProhibited, anyNoListings };
+}
+
+// Wires up the expand/collapse click handlers for a table built by
+// renderIngredientRows — namespaced by the same `prefix`.
+function wireIngredientRows(prefix){
+  document.querySelectorAll('[data-' + prefix + '-idx]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const idx = btn.getAttribute('data-' + prefix + '-idx');
+      const detailRow = document.querySelector('[data-' + prefix + '-detail-idx="' + idx + '"]');
+      if (detailRow) detailRow.classList.toggle('hidden');
+    });
+  });
+}
+
+// Tracks the most recently priced result, so the "Add to basket" button up in
+// the recipe panel (which fires before the results table even exists on the
+// very first click) can still grab a real cost instead of always adding a
+// "not priced" entry.
+let lastResultsInfo = null;
+
+function renderResults(itemName, recipe, world, rows){
+  const jobName = JOB_NAMES[recipe.job] || ('Job ' + recipe.job);
+  const { bodyHtml, total, anyProhibited, anyNoListings } = renderIngredientRows(rows, 'craft', world);
 
   document.getElementById('results').innerHTML = `
     <div class="panel">
@@ -1147,7 +1504,7 @@ function renderResults(itemName, recipe, world, rows){
           <th>Ingredient</th><th class="num">Qty</th><th class="num">Unit price</th><th>Source world</th><th class="num">Subtotal</th>
         </tr></thead>
         <tbody>
-          ${bodyRows}
+          ${bodyHtml}
           <tr class="total-row">
             <td colspan="4">Total (priceable ingredients only)</td>
             <td class="num">${fmt(total)}g</td>
@@ -1155,7 +1512,7 @@ function renderResults(itemName, recipe, world, rows){
         </tbody>
       </table>
       ${anyProhibited ? '<p class="recipe-meta prohibited">Some ingredients are market prohibited and excluded from the total.</p>' : ''}
-      ${anyNoListings ? '<p class="recipe-meta nolistings">Some ingredients currently have no one selling on ' + world + '.</p>' : ''}
+      ${anyNoListings ? '<p class="recipe-meta nolistings">Some ingredients currently have no listings (either on ' + world + ' at all, or just not on your selected world).</p>' : ''}
       <p class="recipe-meta">Prices are the cheapest single listing found across the Light data center at lookup time. They change constantly.</p>
       <p class="recipe-meta" style="margin-bottom:12px;">Click any ingredient's name to see how it's actually obtained.</p>
       <div class="row" style="margin-bottom:0;">
@@ -1166,13 +1523,7 @@ function renderResults(itemName, recipe, world, rows){
 
   lastResultsInfo = { itemName, jobName, lvl: recipe.lvl, total };
 
-  document.querySelectorAll('.ing-name-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const idx = btn.dataset.idx;
-      const detailRow = document.querySelector('[data-detail-idx="' + idx + '"]');
-      if (detailRow) detailRow.classList.toggle('hidden');
-    });
-  });
+  wireIngredientRows('craft');
   const addBtn = document.getElementById('addBasketFromResultsBtn');
   if (addBtn){
     addBtn.addEventListener('click', ()=>{
@@ -1188,14 +1539,16 @@ async function lookupItem(){
   if (!raw){ alert('Type an item name or paste a wiki URL.'); return; }
   lookupUI.hideError();
   lookupUI.clearLog();
+  clearSuggestions('lookupSuggestions');
   document.getElementById('lookupResults').innerHTML = '';
   const btn = document.getElementById('lookupItemBtn');
   btn.disabled = true;
   try{
+    const isUrlInput = /^https?:\/\//i.test(raw);
     let pageUrl;
-    if (/^https?:\/\//i.test(raw)){
+    if (isUrlInput){
       try{ pageUrl = new URL(raw).toString(); }
-      catch(e){ throw new Error('That doesn\'t look like a valid URL.'); }
+      catch(e){ throw friendlyError('That doesn\'t look like a valid URL.'); }
     } else {
       pageUrl = wikiUrlForName(raw);
     }
@@ -1205,7 +1558,20 @@ async function lookupItem(){
     const html = await fetchHtml(pageUrl, lookupUI.log);
 
     const gtId = extractGarlandId(html);
-    if (!gtId) throw new Error('Could not find a market/item link on that page. Try the exact wiki spelling, or paste the full wiki URL instead.');
+    if (!gtId){
+      if (!isUrlInput){
+        lookupUI.log('No direct match — checking the wiki\'s own search suggestions...');
+        const suggestions = await fetchWikiSuggestions(raw, lookupUI.log);
+        if (suggestions.length){
+          renderSuggestions('lookupSuggestions', suggestions, (s)=>{
+            document.getElementById('lookupInput').value = s.name;
+            lookupItem();
+          });
+          throw friendlyError('Couldn\'t find an exact match for "' + raw + '". Try one of the suggestions above, or check the spelling.');
+        }
+      }
+      throw friendlyError('Could not find a market/item link on that page. Try the exact wiki spelling, or paste the full wiki URL instead.');
+    }
     lookupUI.log('Found item ID ' + gtId + '. Fetching item data from Garland Tools...');
 
     lookupUI.setStage('recipe');
@@ -1240,6 +1606,119 @@ function renderItemLookup(item){
       <p class="acq-link" style="margin:10px 0 0;"><a href="${wikiLink}" target="_blank" rel="noopener">View on wiki →</a>${universalisPart}</p>
     </div>
   `;
+}
+
+// --- Glamour tab: paste an Eorzea Collection glamour page, find every
+// equipped piece, and offer a one-click jump into Craft Cost for anything
+// that's actually craftable. ---
+async function lookupGlamour(){
+  const raw = document.getElementById('glamourInput').value.trim();
+  if (!raw){ alert('Paste an Eorzea Collection glamour URL first.'); return; }
+  glamourUI.hideError();
+  glamourUI.clearLog();
+  document.getElementById('glamourResults').innerHTML = '';
+  const btn = document.getElementById('glamourBtn');
+  btn.disabled = true;
+  try{
+    let pageUrl;
+    try{ pageUrl = new URL(raw).toString(); }
+    catch(e){ throw friendlyError('That doesn\'t look like a valid URL.'); }
+    if (!/eorzeacollection\.com/i.test(pageUrl)){
+      throw friendlyError('That doesn\'t look like an Eorzea Collection link — paste a glamour page URL from ffxiv.eorzeacollection.com.');
+    }
+
+    glamourUI.setStage('wiki');
+    glamourUI.log('Fetching glamour page...');
+    const html = await fetchHtml(pageUrl, glamourUI.log);
+
+    const pieces = extractEorzeaGear(html);
+    if (!pieces.length){
+      throw friendlyError('Couldn\'t find any equipped items on that page — make sure it\'s an actual glamour page (not a gearset, profile, or listing page).');
+    }
+    glamourUI.log('Found ' + pieces.length + ' piece(s): ' + pieces.map(p=>p.name).join(', '));
+
+    glamourUI.setStage('glamour');
+    glamourUI.log('Resolving each piece on the wiki...');
+    const resolved = await Promise.all(pieces.map(async piece => {
+      try{
+        let pw = wikiUrlForName(piece.name);
+        let wHtml = await fetchHtml(pw, glamourUI.log);
+        let gtId = extractGarlandId(wHtml);
+        if (!gtId){
+          // Exact page didn't exist or had no market link — try the wiki's own
+          // search suggestions and take its best guess before giving up.
+          const suggestions = await fetchWikiSuggestions(piece.name, glamourUI.log);
+          if (suggestions.length){
+            pw = suggestions[0].url;
+            wHtml = await fetchHtml(pw, glamourUI.log);
+            gtId = extractGarlandId(wHtml);
+          }
+        }
+        if (!gtId) return { name: piece.name, resolveFailed: true };
+        const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json', glamourUI.log);
+        const item = itemData.item;
+        return {
+          name: item.name,
+          gtId,
+          tradeable: !!item.tradeable,
+          craftable: !!(item.craft && item.craft.length),
+          tags: summarizeAcquisition(item)
+        };
+      }catch(e){
+        return { name: piece.name, resolveFailed: true };
+      }
+    }));
+
+    renderGlamour(resolved);
+    glamourUI.log('Done.');
+    addRecent('lycaas_recent_glamour', { name: (pageUrl.split('/').filter(Boolean).pop() || 'Glamour').replace(/-/g,' '), url: pageUrl });
+    renderRecent('lycaas_recent_glamour', 'recentGlamour', item => {
+      document.getElementById('glamourInput').value = item.url;
+      lookupGlamour();
+    });
+  }catch(e){
+    glamourUI.log('Error: ' + e.message, true);
+    glamourUI.showError(e);
+  }finally{
+    glamourUI.stopStatus();
+    btn.disabled = false;
+  }
+}
+
+function renderGlamour(items){
+  const cards = items.map(item => {
+    if (item.resolveFailed){
+      return `<div class="panel" style="margin-bottom:10px;">
+        <h3 style="margin:0 0 6px;">${item.name}</h3>
+        <p class="recipe-meta" style="margin:0;">Couldn't automatically match this to an exact wiki page.</p>
+        <p class="acq-link" style="margin:6px 0 0;"><a href="${wikiUrlForName(item.name)}" target="_blank" rel="noopener">Search the wiki →</a></p>
+      </div>`;
+    }
+    const tagsHtml = item.tags.map(t=>'<span class="acq-tag">'+t+'</span>').join('');
+    const wikiLink = wikiUrlForName(item.name);
+    const universalisPart = item.tradeable
+      ? (' &nbsp;·&nbsp; <a href="https://universalis.app/market/' + item.gtId + '" target="_blank" rel="noopener">Check on Universalis →</a>')
+      : '';
+    const actionHtml = item.craftable
+      ? '<button class="secondary price-in-craft-btn" data-name="' + item.name.replace(/"/g, '&quot;') + '">Price this in Craft Cost →</button>'
+      : ('<span class="recipe-meta" style="margin:0;">Not craftable — ' + (item.tradeable ? 'buy it directly' : 'see the tags above for how to get it') + '.</span>');
+    return `<div class="panel" style="margin-bottom:10px;">
+      <h3 style="margin:0 0 6px;">${item.name}</h3>
+      <div class="acq-tags">${tagsHtml}</div>
+      <p class="acq-link" style="margin:8px 0 10px;"><a href="${wikiLink}" target="_blank" rel="noopener">View on wiki →</a>${universalisPart}</p>
+      <div class="row" style="margin-bottom:0;">${actionHtml}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('glamourResults').innerHTML = cards;
+  document.querySelectorAll('.price-in-craft-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const name = btn.dataset.name;
+      showTab('craft');
+      document.getElementById('wikiUrl').value = name;
+      lookupRecipe();
+    });
+  });
 }
 
 // --- The slave's mood: purely cosmetic, tracked per browser session (resets
@@ -1407,11 +1886,11 @@ async function buildShoppingList(){
   try{
     const basket = loadBasket();
     if (!basket.length){
-      throw new Error('Your basket is empty — add a few crafts from the Craft Cost tab first, then come back here.');
+      throw friendlyError('Your basket is empty — add a few crafts from the Craft Cost tab first, then come back here.');
     }
     const priceable = basket.filter(i => i.gtId != null);
     if (!priceable.length){
-      throw new Error('Nothing in your basket has recipe data attached — it may have been added before this feature existed. Re-add it from the Craft Cost tab and it\'ll carry the recipe info this time.');
+      throw friendlyError('Nothing in your basket has recipe data attached — it may have been added before this feature existed. Re-add it from the Craft Cost tab and it\'ll carry the recipe info this time.');
     }
 
     shoppingUI.setStage('recipe');
@@ -1451,7 +1930,7 @@ async function buildShoppingList(){
     });
     const combinedList = [...combined.values()];
     if (!combinedList.length){
-      throw new Error('None of the basket recipes resolved to any ingredients — nothing to build a list from.');
+      throw friendlyError('None of the basket recipes resolved to any ingredients — nothing to build a list from.');
     }
 
     shoppingUI.setStage('prices');
@@ -1464,23 +1943,28 @@ async function buildShoppingList(){
       throw new Error('Universalis lookup failed for the ' + FIXED_WORLD + ' data center. (' + e.message + ')');
     }
 
+    const worldFilter = getActiveWorldFilter();
     const rows = combinedList.map(ing=>{
-      const isTreasure = !!(ing.raw && ing.raw.treasure && ing.raw.treasure.length);
-      const base = { ...ing, isTreasure };
+      const isCrystal = isCrystalName(ing.name);
+      const isTreasure = !isCrystal && !!(ing.raw && ing.raw.treasure && ing.raw.treasure.length);
+      const base = { ...ing, isTreasure, isCrystal };
       if (ing.resolveFailed || !ing.tradeable){
         return {...base, status:'prohibited', unit:null, subtotal:0};
       }
       if (priceResult.unresolved.includes(ing.id) || priceResult.unresolved.includes(String(ing.id)) || !priceResult.items[ing.id]){
         return {...base, status:'prohibited', unit:null, subtotal:0};
       }
-      const priced = priceForQuantity(priceResult.items[ing.id], ing.amount);
+      const priced = priceForQuantity(priceResult.items[ing.id], ing.amount, worldFilter);
       if (!priced){
+        const hasAnyListings = !!(priceResult.items[ing.id] && priceResult.items[ing.id].listings && priceResult.items[ing.id].listings.length);
+        if (worldFilter && hasAnyListings) return {...base, status:'nohomeworld', unit:null, subtotal:0};
         return {...base, status:'nolistings', unit:null, subtotal:0};
       }
       return {
         ...base, status:'ok', unit:priced.unit, listingWorld:priced.worldName, hq:priced.hq,
         subtotal:priced.total, outlier:priced.outlier, typicalPrice:priced.typicalPrice,
-        blended:priced.blended, listingsUsed:priced.listingsUsed
+        blended:priced.blended, overbuy:priced.overbuy, acquiredQty:priced.acquiredQty,
+        listingsUsed:priced.listingsUsed
       };
     });
 
@@ -1496,51 +1980,7 @@ async function buildShoppingList(){
 }
 
 function renderShoppingList(perItem, rows){
-  let total = 0;
-  let anyProhibited = false;
-  let anyNoListings = false;
-  const bodyRows = rows.map((r, idx)=>{
-    const treasureBadge = r.isTreasure
-      ? '<span class="treasure-tag" title="Comes from a Treasure Map, not something you buy/craft directly — these tend to be pricey and slow to get.">🗺 Treasure Map</span>'
-      : '';
-    const nameCell = '<button class="ing-name-btn" data-shop-idx="' + idx + '">' + r.name + '</button>' + treasureBadge;
-    let row;
-    if (r.status === 'prohibited'){
-      anyProhibited = true;
-      row = `<tr>
-        <td>${nameCell}</td>
-        <td class="num">${r.amount}</td>
-        <td colspan="3" class="prohibited">Market prohibited (not sellable on the market board)</td>
-      </tr>`;
-    } else if (r.status === 'nolistings'){
-      anyNoListings = true;
-      row = `<tr>
-        <td>${nameCell}</td>
-        <td class="num">${r.amount}</td>
-        <td colspan="3" class="nolistings">No current listings on ${FIXED_WORLD}</td>
-      </tr>`;
-    } else {
-      total += r.subtotal;
-      const outlierBadge = r.outlier
-        ? '<span class="outlier-tag" title="Only a unit or two listed at this price — the rest of the board is pricier. Click the name for details.">⚠ fluke?</span>'
-        : '';
-      const blendedBadge = r.blended
-        ? '<span class="blended-tag" title="The cheapest listing didn\'t have enough in stock for all ' + r.amount + ' — this total blends multiple listings. Click the name for the breakdown.">multiple listings</span>'
-        : '';
-      row = `<tr>
-        <td>${nameCell}</td>
-        <td class="num">${r.amount}</td>
-        <td class="num">${fmt(r.unit)}g ${r.hq ? '(HQ)' : ''} ${outlierBadge}${blendedBadge}</td>
-        <td class="world-tag">${r.listingWorld}</td>
-        <td class="num">${fmt(r.subtotal)}g</td>
-      </tr>`;
-    }
-    const detail = '<tr class="ing-detail-row hidden" data-shop-detail-idx="' + idx + '"><td colspan="5">'
-      + '<p class="recipe-meta" style="margin:0 0 8px;">Needed for: ' + r.usedBy.join(', ') + '</p>'
-      + renderAcquisitionDetail(r) + '</td></tr>';
-    return row + detail;
-  }).join('');
-
+  const { bodyHtml, total, anyProhibited, anyNoListings } = renderIngredientRows(rows, 'shop', FIXED_WORLD);
   const skipped = perItem.filter(p=>p.failed);
   document.getElementById('shoppingResults').innerHTML = `
     <div class="panel">
@@ -1550,7 +1990,7 @@ function renderShoppingList(perItem, rows){
           <th>Ingredient</th><th class="num">Total qty</th><th class="num">Unit price</th><th>Source world</th><th class="num">Subtotal</th>
         </tr></thead>
         <tbody>
-          ${bodyRows}
+          ${bodyHtml}
           <tr class="total-row">
             <td colspan="4">Total (priceable ingredients only)</td>
             <td class="num">${fmt(total)}g</td>
@@ -1563,13 +2003,7 @@ function renderShoppingList(perItem, rows){
       <p class="recipe-meta" style="margin-bottom:0;">Click any ingredient's name to see how it's obtained and which basket item(s) need it.</p>
     </div>
   `;
-  document.querySelectorAll('[data-shop-idx]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const idx = btn.dataset.shopIdx;
-      const detailRow = document.querySelector('[data-shop-detail-idx="' + idx + '"]');
-      if (detailRow) detailRow.classList.toggle('hidden');
-    });
-  });
+  wireIngredientRows('shop');
 }
 
 // --- Profit Calculator tab: craft-cost-in vs sell-price-out for a single
@@ -1580,14 +2014,16 @@ async function checkProfit(){
   if (!raw){ alert('Type an item name or paste a wiki page URL first.'); return; }
   profitUI.hideError();
   profitUI.clearLog();
+  clearSuggestions('profitSuggestions');
   document.getElementById('profitResults').innerHTML = '';
   const btn = document.getElementById('profitBtn');
   btn.disabled = true;
   try{
+    const isUrlInput = /^https?:\/\//i.test(raw);
     let pageUrl;
-    if (/^https?:\/\//i.test(raw)){
+    if (isUrlInput){
       try{ pageUrl = new URL(raw).toString(); }
-      catch(e){ throw new Error('That doesn\'t look like a valid URL.'); }
+      catch(e){ throw friendlyError('That doesn\'t look like a valid URL.'); }
     } else {
       pageUrl = wikiUrlForName(raw);
     }
@@ -1597,7 +2033,20 @@ async function checkProfit(){
     const html = await fetchHtml(pageUrl, profitUI.log);
 
     const gtId = extractGarlandId(html);
-    if (!gtId) throw new Error('Could not find a market/item link on that page. Try the exact wiki spelling, or paste the full wiki URL instead.');
+    if (!gtId){
+      if (!isUrlInput){
+        profitUI.log('No direct match — checking the wiki\'s own search suggestions...');
+        const suggestions = await fetchWikiSuggestions(raw, profitUI.log);
+        if (suggestions.length){
+          renderSuggestions('profitSuggestions', suggestions, (s)=>{
+            document.getElementById('profitInput').value = s.name;
+            checkProfit();
+          });
+          throw friendlyError('Couldn\'t find an exact match for "' + raw + '". Try one of the suggestions above, or check the spelling.');
+        }
+      }
+      throw friendlyError('Could not find a market/item link on that page. Try the exact wiki spelling, or paste the full wiki URL instead.');
+    }
     profitUI.log('Found item ID ' + gtId + '. Fetching recipe data from Garland Tools...');
 
     profitUI.setStage('recipe');
@@ -1605,10 +2054,10 @@ async function checkProfit(){
     const name = itemData.item.name;
     const crafts = itemData.item.craft || [];
     if (!crafts.length){
-      throw new Error('"' + name + '" isn\'t a craftable item, so there\'s no materials cost to weigh against a sell price.');
+      throw friendlyError('"' + name + '" isn\'t a craftable item, so there\'s no materials cost to weigh against a sell price.');
     }
     if (!itemData.item.tradeable){
-      throw new Error('"' + name + '" can\'t be sold on the market board, so there\'s no sell price to compare against.');
+      throw friendlyError('"' + name + '" can\'t be sold on the market board, so there\'s no sell price to compare against.');
     }
     const recipe = crafts[0];
 
@@ -1627,31 +2076,36 @@ async function checkProfit(){
       throw new Error('Universalis lookup failed for the ' + FIXED_WORLD + ' data center. (' + e.message + ')');
     }
 
+    const worldFilter = getActiveWorldFilter();
     let craftTotal = 0;
     const matRows = ingredients.map(ing=>{
-      const isTreasure = !!(ing.raw && ing.raw.treasure && ing.raw.treasure.length);
-      const base = { ...ing, isTreasure };
+      const isCrystal = isCrystalName(ing.name);
+      const isTreasure = !isCrystal && !!(ing.raw && ing.raw.treasure && ing.raw.treasure.length);
+      const base = { ...ing, isTreasure, isCrystal };
       if (ing.resolveFailed || !ing.tradeable){
         return {...base, status:'prohibited', unit:null, subtotal:0};
       }
       if (priceResult.unresolved.includes(ing.id) || priceResult.unresolved.includes(String(ing.id)) || !priceResult.items[ing.id]){
         return {...base, status:'prohibited', unit:null, subtotal:0};
       }
-      const priced = priceForQuantity(priceResult.items[ing.id], ing.amount);
+      const priced = priceForQuantity(priceResult.items[ing.id], ing.amount, worldFilter);
       if (!priced){
+        const hasAnyListings = !!(priceResult.items[ing.id] && priceResult.items[ing.id].listings && priceResult.items[ing.id].listings.length);
+        if (worldFilter && hasAnyListings) return {...base, status:'nohomeworld', unit:null, subtotal:0};
         return {...base, status:'nolistings', unit:null, subtotal:0};
       }
       craftTotal += priced.total;
       return {
         ...base, status:'ok', unit:priced.unit, listingWorld:priced.worldName, hq:priced.hq,
         subtotal:priced.total, outlier:priced.outlier, typicalPrice:priced.typicalPrice,
-        blended:priced.blended, listingsUsed:priced.listingsUsed
+        blended:priced.blended, overbuy:priced.overbuy, acquiredQty:priced.acquiredQty,
+        listingsUsed:priced.listingsUsed
       };
     });
 
     let sellPrice = null;
     if (!priceResult.unresolved.includes(gtId) && !priceResult.unresolved.includes(String(gtId)) && priceResult.items[gtId]){
-      const sellPriced = priceForQuantity(priceResult.items[gtId], 1);
+      const sellPriced = priceForQuantity(priceResult.items[gtId], 1, worldFilter);
       if (sellPriced) sellPrice = sellPriced.unit;
     }
 
@@ -1692,43 +2146,7 @@ function renderProfit(name, recipe, gtId, matRows, craftTotal, sellPrice){
       + '</p>';
   }
 
-  const bodyRows = matRows.map((r, idx)=>{
-    const treasureBadge = r.isTreasure
-      ? '<span class="treasure-tag" title="Comes from a Treasure Map, not something you buy/craft directly — these tend to be pricey and slow to get.">🗺 Treasure Map</span>'
-      : '';
-    const nameCell = '<button class="ing-name-btn" data-profit-idx="' + idx + '">' + r.name + '</button>' + treasureBadge;
-    let row;
-    if (r.status === 'prohibited'){
-      row = `<tr>
-        <td>${nameCell}</td>
-        <td class="num">${r.amount}</td>
-        <td colspan="3" class="prohibited">Market prohibited (not sellable on the market board)</td>
-      </tr>`;
-    } else if (r.status === 'nolistings'){
-      row = `<tr>
-        <td>${nameCell}</td>
-        <td class="num">${r.amount}</td>
-        <td colspan="3" class="nolistings">No current listings on ${FIXED_WORLD}</td>
-      </tr>`;
-    } else {
-      const outlierBadge = r.outlier
-        ? '<span class="outlier-tag" title="Only a unit or two listed at this price — the rest of the board is pricier. Click the name for details.">⚠ fluke?</span>'
-        : '';
-      const blendedBadge = r.blended
-        ? '<span class="blended-tag" title="The cheapest listing didn\'t have enough in stock for all ' + r.amount + ' — this total blends multiple listings. Click the name for the breakdown.">multiple listings</span>'
-        : '';
-      row = `<tr>
-        <td>${nameCell}</td>
-        <td class="num">${r.amount}</td>
-        <td class="num">${fmt(r.unit)}g ${r.hq ? '(HQ)' : ''} ${outlierBadge}${blendedBadge}</td>
-        <td class="world-tag">${r.listingWorld}</td>
-        <td class="num">${fmt(r.subtotal)}g</td>
-      </tr>`;
-    }
-    const detail = '<tr class="ing-detail-row hidden" data-profit-detail-idx="' + idx + '"><td colspan="5">'
-      + renderAcquisitionDetail(r) + '</td></tr>';
-    return row + detail;
-  }).join('');
+  const { bodyHtml } = renderIngredientRows(matRows, 'profit', FIXED_WORLD);
 
   document.getElementById('profitResults').innerHTML = `
     <div class="panel">
@@ -1739,7 +2157,7 @@ function renderProfit(name, recipe, gtId, matRows, craftTotal, sellPrice){
           <th>Ingredient</th><th class="num">Qty</th><th class="num">Unit price</th><th>Source world</th><th class="num">Subtotal</th>
         </tr></thead>
         <tbody>
-          ${bodyRows}
+          ${bodyHtml}
           <tr class="total-row">
             <td colspan="4">Materials total</td>
             <td class="num">${fmt(craftTotal)}g</td>
@@ -1749,13 +2167,7 @@ function renderProfit(name, recipe, gtId, matRows, craftTotal, sellPrice){
       <p class="acq-link" style="margin:10px 0 0;"><a href="https://universalis.app/market/${gtId}" target="_blank" rel="noopener">Check this item on Universalis →</a></p>
     </div>
   `;
-  document.querySelectorAll('[data-profit-idx]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const idx = btn.dataset.profitIdx;
-      const detailRow = document.querySelector('[data-profit-detail-idx="' + idx + '"]');
-      if (detailRow) detailRow.classList.toggle('hidden');
-    });
-  });
+  wireIngredientRows('profit');
 }
 
 // --- Watchlist tab: a saved list of individual ingredients (not whole
@@ -1771,13 +2183,15 @@ async function addToWatchlist(){
   if (!raw){ alert('Type an item name or paste a wiki URL.'); return; }
   watchUI.hideError();
   watchUI.clearLog();
+  clearSuggestions('watchSuggestions');
   const btn = document.getElementById('watchAddBtn');
   btn.disabled = true;
   try{
+    const isUrlInput = /^https?:\/\//i.test(raw);
     let pageUrl;
-    if (/^https?:\/\//i.test(raw)){
+    if (isUrlInput){
       try{ pageUrl = new URL(raw).toString(); }
-      catch(e){ throw new Error('That doesn\'t look like a valid URL.'); }
+      catch(e){ throw friendlyError('That doesn\'t look like a valid URL.'); }
     } else {
       pageUrl = wikiUrlForName(raw);
     }
@@ -1786,20 +2200,39 @@ async function addToWatchlist(){
     watchUI.log('Fetching wiki page...');
     const html = await fetchHtml(pageUrl, watchUI.log);
     const gtId = extractGarlandId(html);
-    if (!gtId) throw new Error('Could not find a market/item link on that page. Try the exact wiki spelling, or paste the full wiki URL instead.');
+    if (!gtId){
+      if (!isUrlInput){
+        watchUI.log('No direct match — checking the wiki\'s own search suggestions...');
+        const suggestions = await fetchWikiSuggestions(raw, watchUI.log);
+        if (suggestions.length){
+          renderSuggestions('watchSuggestions', suggestions, (s)=>{
+            document.getElementById('watchInput').value = s.name;
+            addToWatchlist();
+          });
+          throw friendlyError('Couldn\'t find an exact match for "' + raw + '". Try one of the suggestions above, or check the spelling.');
+        }
+      }
+      throw friendlyError('Could not find a market/item link on that page. Try the exact wiki spelling, or paste the full wiki URL instead.');
+    }
 
     watchUI.setStage('recipe');
     watchUI.log('Found item ID ' + gtId + '. Fetching item data...');
     const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json', watchUI.log);
     const item = itemData.item;
-    if (!item.tradeable) throw new Error('"' + item.name + '" can\'t be sold on the market board — there\'s no price to watch.');
+    if (!item.tradeable) throw friendlyError('"' + item.name + '" can\'t be sold on the market board — there\'s no price to watch.');
 
     const list = loadWatchlist();
     if (list.find(w => String(w.id) === String(gtId))){
       watchUI.log('Already on the watchlist.');
     } else {
+      const isCrystal = isCrystalName(item.name);
       list.push({
-        id: gtId, name: item.name, isTreasure: !!(item.treasure && item.treasure.length),
+        id: gtId, name: item.name,
+        isCrystal,
+        // Crystals technically appear in Garland's "treasure" source list too (Timeworn
+        // Maps can drop them), but that's not the notable fact about a crystal — they're
+        // common catalysts, not "treasure map loot." The Crystal badge covers it instead.
+        isTreasure: !isCrystal && !!(item.treasure && item.treasure.length),
         unit: null, listingWorld: null, outlier: false, typicalPrice: null, checkedAt: null
       });
       saveWatchlist(list);
@@ -1838,19 +2271,22 @@ async function recheckWatchlist(){
     }catch(e){
       throw new Error('Universalis lookup failed for the ' + FIXED_WORLD + ' data center. (' + e.message + ')');
     }
+    const worldFilter = getActiveWorldFilter();
     const now = Date.now();
     list.forEach(w => {
       if (priceResult.unresolved.includes(w.id) || priceResult.unresolved.includes(String(w.id)) || !priceResult.items[w.id]){
-        w.unit = null; w.listingWorld = null; w.outlier = false; w.typicalPrice = null; w.checkedAt = now;
+        w.unit = null; w.listingWorld = null; w.outlier = false; w.typicalPrice = null; w.checkedAt = now; w.noHomeWorldStock = false;
         return;
       }
-      const priced = priceForQuantity(priceResult.items[w.id], 1);
+      const priced = priceForQuantity(priceResult.items[w.id], 1, worldFilter);
       if (!priced){
+        const hasAnyListings = !!(priceResult.items[w.id].listings && priceResult.items[w.id].listings.length);
         w.unit = null; w.listingWorld = null; w.outlier = false; w.typicalPrice = null; w.checkedAt = now;
+        w.noHomeWorldStock = !!(worldFilter && hasAnyListings);
         return;
       }
       w.unit = priced.unit; w.listingWorld = priced.worldName; w.outlier = priced.outlier;
-      w.typicalPrice = priced.typicalPrice; w.checkedAt = now;
+      w.typicalPrice = priced.typicalPrice; w.checkedAt = now; w.noHomeWorldStock = false;
     });
     saveWatchlist(list);
     renderWatchlist();
@@ -1880,15 +2316,22 @@ function renderWatchlist(){
             const treasureBadge = w.isTreasure
               ? '<span class="treasure-tag" title="Comes from a Treasure Map, not something you buy/craft directly.">🗺 Treasure Map</span>'
               : '';
+            const crystalBadge = w.isCrystal
+              ? '<span class="treasure-tag" title="An elemental crystal — a common crafting catalyst, not a rare material.">✦ Crystal</span>'
+              : '';
             const outlierBadge = w.outlier
               ? '<span class="outlier-tag" title="Only a unit or two listed at this price — the rest of the board is pricier.">⚠ fluke?</span>'
               : '';
             const priceCell = w.unit != null
               ? (fmt(w.unit) + 'g ' + outlierBadge)
-              : '<span class="nolistings">not checked yet</span>';
+              : (w.checkedAt
+                  ? (w.noHomeWorldStock
+                      ? '<span class="nolistings">none on your world</span>'
+                      : '<span class="nolistings">no listings</span>')
+                  : '<span class="nolistings">not checked yet</span>');
             const checkedCell = w.checkedAt ? new Date(w.checkedAt).toLocaleTimeString() : '—';
             return `<tr>
-              <td><a href="${wikiUrlForName(w.name)}" target="_blank" rel="noopener">${w.name}</a>${treasureBadge}</td>
+              <td><a href="${wikiUrlForName(w.name)}" target="_blank" rel="noopener">${w.name}</a>${treasureBadge}${crystalBadge}</td>
               <td class="num">${priceCell}</td>
               <td class="world-tag">${w.listingWorld || ''}</td>
               <td class="world-tag">${checkedCell}</td>
@@ -1902,6 +2345,69 @@ function renderWatchlist(){
   container.querySelectorAll('.watch-remove').forEach(btn=>{
     btn.addEventListener('click', ()=>removeFromWatchlist(btn.dataset.id));
   });
+}
+
+// Watchlist lives in localStorage only — clearing cookies/site data (or
+// switching browsers) wipes it. Export/import moves it to a real file so
+// people can keep a backup or carry it over.
+function downloadTextFile(filename, content, mime){
+  const blob = new Blob([content], { type: mime || 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+function exportWatchlist(){
+  const list = loadWatchlist();
+  if (!list.length){ alert('Watchlist is empty — nothing to export yet.'); return; }
+  const payload = {
+    exportedFrom: 'Lycaa\'s Slave',
+    exportedAt: new Date().toISOString(),
+    watchlist: list
+  };
+  downloadTextFile('lycaas-watchlist.json', JSON.stringify(payload, null, 2), 'application/json');
+}
+
+function importWatchlistFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      const incoming = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.watchlist) ? parsed.watchlist : null);
+      if (!incoming) throw new Error('not a recognizable watchlist file');
+      const current = loadWatchlist();
+      const currentIds = new Set(current.map(w => String(w.id)));
+      let added = 0;
+      incoming.forEach(w => {
+        if (!w || w.id == null || !w.name) return;
+        if (currentIds.has(String(w.id))) return;
+        current.push({
+          id: w.id, name: w.name,
+          isTreasure: !!w.isTreasure, isCrystal: !!w.isCrystal,
+          unit: w.unit != null ? w.unit : null,
+          listingWorld: w.listingWorld || null,
+          outlier: !!w.outlier, typicalPrice: w.typicalPrice != null ? w.typicalPrice : null,
+          checkedAt: w.checkedAt || null, noHomeWorldStock: !!w.noHomeWorldStock
+        });
+        currentIds.add(String(w.id));
+        added++;
+      });
+      saveWatchlist(current);
+      renderWatchlist();
+      const c = document.getElementById('watchImportConfirm');
+      c.textContent = added ? ('Imported ' + added + ' item(s).') : 'Nothing new to import — already had all of those.';
+      c.classList.remove('hidden');
+      setTimeout(()=>c.classList.add('hidden'), 3500);
+    }catch(e){
+      alert('That doesn\'t look like a watchlist export file (' + e.message + ').');
+    }
+  };
+  reader.readAsText(file);
 }
 
 document.getElementById('lookupBtn').addEventListener('click', lookupRecipe);
@@ -1956,7 +2462,21 @@ renderRecent('lycaas_recent_profit', 'recentProfit', item => {
 document.getElementById('watchAddBtn').addEventListener('click', addToWatchlist);
 document.getElementById('watchInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addToWatchlist(); });
 document.getElementById('watchRecheckBtn').addEventListener('click', recheckWatchlist);
+document.getElementById('watchExportBtn').addEventListener('click', exportWatchlist);
+document.getElementById('watchImportBtn').addEventListener('click', ()=>document.getElementById('watchImportFile').click());
+document.getElementById('watchImportFile').addEventListener('change', (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if (file) importWatchlistFile(file);
+  e.target.value = '';
+});
 renderWatchlist();
+
+document.getElementById('glamourBtn').addEventListener('click', lookupGlamour);
+document.getElementById('glamourInput').addEventListener('keydown', e=>{ if(e.key==='Enter') lookupGlamour(); });
+renderRecent('lycaas_recent_glamour', 'recentGlamour', item => {
+  document.getElementById('glamourInput').value = item.url;
+  lookupGlamour();
+});
 
 (function restoreMood(){
   const n = parseInt(sessionStorage.getItem('lycaas_search_count') || '0', 10);
