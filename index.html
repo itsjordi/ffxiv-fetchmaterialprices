@@ -868,22 +868,51 @@ function extractGarlandId(html){
   return m ? m[1] : null;
 }
 
+// Turns HTML entities (both named and numeric) into their real characters —
+// item names routinely have apostrophes/ampersands that get escaped in
+// markup (&#039;, &amp;, &rsquo;, etc.) and need to be undone before the name
+// is used for a wiki lookup or shown to the person.
+function decodeHtmlEntities(str){
+  if (!str) return str;
+  const named = { amp:'&', lt:'<', gt:'>', quot:'"', apos:"'", nbsp:' ', rsquo:'’', lsquo:'‘', rdquo:'”', ldquo:'“', mdash:'—', ndash:'–' };
+  return str.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (whole, code)=>{
+    if (code[0] === '#'){
+      const isHex = code[1] === 'x' || code[1] === 'X';
+      const num = parseInt(code.slice(isHex ? 2 : 1), isHex ? 16 : 10);
+      return isNaN(num) ? whole : String.fromCodePoint(num);
+    }
+    const lower = code.toLowerCase();
+    return named.hasOwnProperty(lower) ? named[lower] : whole;
+  });
+}
+
 // Eorzea Collection glamour pages link every equipped piece (armor and
 // weapon alike) straight to its official Lodestone item page — that's a
 // stable pattern regardless of the surrounding layout/CSS, so this just
 // grabs every such link's visible name, in page order, deduped. It doesn't
 // try to detect which slot (head/body/weapon/etc.) each piece is in since
 // that markup isn't guaranteed — the piece list itself is what matters here.
+// Some of these links wrap plain text, others wrap an icon image with the
+// name only in its alt text (and either single or double quoted attributes),
+// so this pulls in everything between the tags and text-ifies it, falling
+// back to an alt attribute if the link itself has no visible text.
 function extractEorzeaGear(html){
   const results = [];
   const seen = new Set();
-  const linkRe = /<a[^>]+href="(https?:\/\/[a-z]{2}\.finalfantasyxiv\.com\/lodestone\/playguide\/db\/item\/[a-f0-9]+)"[^>]*>([^<]+)<\/a>/gi;
+  const linkRe = /<a\s+[^>]*?href\s*=\s*(["'])(https?:\/\/[a-z]{2}\.finalfantasyxiv\.com\/lodestone\/playguide\/db\/item\/[a-f0-9]+)\1[^>]*>([\s\S]*?)<\/a>/gi;
   let m;
   while ((m = linkRe.exec(html))){
-    const name = m[2].trim();
+    const url = m[2];
+    const inner = m[3];
+    let name = inner.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!name){
+      const altMatch = inner.match(/\balt\s*=\s*["']([^"']+)["']/i) || inner.match(/\btitle\s*=\s*["']([^"']+)["']/i);
+      if (altMatch) name = altMatch[1].trim();
+    }
+    name = decodeHtmlEntities(name);
     if (name && !seen.has(name)){
       seen.add(name);
-      results.push({ name, lodestoneUrl: m[1] });
+      results.push({ name, lodestoneUrl: url });
     }
   }
   return results;
@@ -1087,7 +1116,7 @@ function median(arr){
 // tracks the actual quantity you end up owning (which can be more than you
 // asked for), and flags when the cheapest listing looks like a one-off
 // fluke: a listing of just a unit or two priced far below everything else.
-function priceForQuantity(priceEntry, neededQty, worldFilter){
+function priceForQuantity(priceEntry, neededQty, worldFilter, simplePerUnit){
   if (!priceEntry || !priceEntry.listings || priceEntry.listings.length === 0) return null;
   // Buying from another world in the same data center means actually traveling
   // there — if a home world is set and "home world only" is on, restrict to
@@ -1107,18 +1136,85 @@ function priceForQuantity(priceEntry, neededQty, worldFilter){
     }
   }
 
+  if (simplePerUnit){
+    // Crystals (and anything similarly cheap/plentiful) are sold in lots too,
+    // but nobody actually cares about the "you can't split a lot" nuance for
+    // something everyone already has a stack of — just show a plain
+    // per-unit price like the rest of the market instead of the full
+    // lot-buying breakdown.
+    return {
+      unit: cheapest.pricePerUnit,
+      worldName: cheapest.worldName,
+      hq: cheapest.hq,
+      total: cheapest.pricePerUnit * neededQty,
+      outlier,
+      typicalPrice,
+      blended: false,
+      overbuy: false,
+      acquiredQty: neededQty,
+      listingsUsed: [{ qty: neededQty, price: cheapest.pricePerUnit, worldName: cheapest.worldName, hq: cheapest.hq }]
+    };
+  }
+
+  // Picking the actual cheapest *combination* of whole lots, not just
+  // "cheapest-per-unit first, buy the whole lot, repeat." That greedy
+  // approach could buy a tiny cheap-per-unit lot AND THEN still need to buy
+  // a bigger lot on top of it — even when that bigger lot alone already
+  // covers the full amount needed. A small 0/1-knapsack-style search over
+  // the real listings (capped at however much is actually needed) finds the
+  // true minimum total instead.
   let remaining = neededQty;
   let total = 0;
   let acquiredQty = 0;
   const listingsUsed = [];
-  for (const listing of sorted){
-    if (remaining <= 0) break;
-    const lotQty = listing.quantity || 1;
-    // Whole lot, every time — no buying "3 out of an 8-stack."
-    total += lotQty * listing.pricePerUnit;
-    acquiredQty += lotQty;
-    remaining -= lotQty;
-    listingsUsed.push({ qty: lotQty, price: listing.pricePerUnit, worldName: listing.worldName, hq: listing.hq });
+
+  const totalAvailable = sorted.reduce((s,l)=> s + (l.quantity || 1), 0);
+  const cap = Math.max(0, Math.min(neededQty, totalAvailable));
+
+  if (cap > 0){
+    const n = sorted.length;
+    const INF = Infinity;
+    // dp[i][j] = min gil using only the first i listings to acquire at
+    // least j units (j capped at `cap`, since anything beyond what's
+    // actually needed doesn't matter for comparison purposes).
+    const dp = Array.from({ length: n + 1 }, () => new Array(cap + 1).fill(INF));
+    dp[0][0] = 0;
+    for (let i = 1; i <= n; i++){
+      const listing = sorted[i - 1];
+      const lotQty = listing.quantity || 1;
+      const lotCost = lotQty * listing.pricePerUnit;
+      const prevRow = dp[i - 1];
+      const row = dp[i];
+      for (let j = 0; j <= cap; j++){
+        const withoutIt = prevRow[j];
+        const prevJ = Math.max(0, j - lotQty);
+        const withIt = prevRow[prevJ] + lotCost;
+        row[j] = Math.min(withoutIt, withIt);
+      }
+    }
+    // Walk the choices back to see exactly which lots were actually used.
+    const used = [];
+    let i = n, j = cap;
+    while (i > 0 && j > 0){
+      const listing = sorted[i - 1];
+      const lotQty = listing.quantity || 1;
+      const lotCost = lotQty * listing.pricePerUnit;
+      const prevJ = Math.max(0, j - lotQty);
+      const withIt = dp[i - 1][prevJ] + lotCost;
+      if (withIt < dp[i - 1][j]){
+        used.push(listing);
+        j = prevJ;
+      }
+      i--;
+    }
+    used.reverse();
+    for (const listing of used){
+      const lotQty = listing.quantity || 1;
+      total += lotQty * listing.pricePerUnit;
+      acquiredQty += lotQty;
+      listingsUsed.push({ qty: lotQty, price: listing.pricePerUnit, worldName: listing.worldName, hq: listing.hq });
+    }
+    remaining = neededQty - acquiredQty;
   }
   if (remaining > 0){
     // Ran out of listed stock — extrapolate the rest at the priciest listing seen,
@@ -1208,7 +1304,7 @@ function computeCraftCost(ing, priceResult, worldFilter){
     // Sub-ingredient amount is "per unit of ing" — scale by how many units of
     // ing the recipe actually needs.
     const neededTotal = sub.amount * ing.amount;
-    const priced = priceForQuantity(priceResult.items[sub.id], neededTotal, worldFilter);
+    const priced = priceForQuantity(priceResult.items[sub.id], neededTotal, worldFilter, isCrystalName(sub.name));
     if (!priced) return null;
     total += priced.total;
     breakdown.push({
@@ -1289,7 +1385,7 @@ async function getPrices(){
       if (priceResult.unresolved.includes(ing.id) || priceResult.unresolved.includes(String(ing.id)) || !priceResult.items[ing.id]){
         return {...base, status:'prohibited', unit:null, subtotal:0};
       }
-      const priced = priceForQuantity(priceResult.items[ing.id], ing.amount, worldFilter);
+      const priced = priceForQuantity(priceResult.items[ing.id], ing.amount, worldFilter, isCrystal);
       if (!priced){
         const hasAnyListings = !!(priceResult.items[ing.id] && priceResult.items[ing.id].listings && priceResult.items[ing.id].listings.length);
         if (worldFilter && hasAnyListings) return {...base, status:'nohomeworld', unit:null, subtotal:0};
@@ -1954,7 +2050,7 @@ async function buildShoppingList(){
       if (priceResult.unresolved.includes(ing.id) || priceResult.unresolved.includes(String(ing.id)) || !priceResult.items[ing.id]){
         return {...base, status:'prohibited', unit:null, subtotal:0};
       }
-      const priced = priceForQuantity(priceResult.items[ing.id], ing.amount, worldFilter);
+      const priced = priceForQuantity(priceResult.items[ing.id], ing.amount, worldFilter, isCrystal);
       if (!priced){
         const hasAnyListings = !!(priceResult.items[ing.id] && priceResult.items[ing.id].listings && priceResult.items[ing.id].listings.length);
         if (worldFilter && hasAnyListings) return {...base, status:'nohomeworld', unit:null, subtotal:0};
@@ -2088,7 +2184,7 @@ async function checkProfit(){
       if (priceResult.unresolved.includes(ing.id) || priceResult.unresolved.includes(String(ing.id)) || !priceResult.items[ing.id]){
         return {...base, status:'prohibited', unit:null, subtotal:0};
       }
-      const priced = priceForQuantity(priceResult.items[ing.id], ing.amount, worldFilter);
+      const priced = priceForQuantity(priceResult.items[ing.id], ing.amount, worldFilter, isCrystal);
       if (!priced){
         const hasAnyListings = !!(priceResult.items[ing.id] && priceResult.items[ing.id].listings && priceResult.items[ing.id].listings.length);
         if (worldFilter && hasAnyListings) return {...base, status:'nohomeworld', unit:null, subtotal:0};
@@ -2278,7 +2374,7 @@ async function recheckWatchlist(){
         w.unit = null; w.listingWorld = null; w.outlier = false; w.typicalPrice = null; w.checkedAt = now; w.noHomeWorldStock = false;
         return;
       }
-      const priced = priceForQuantity(priceResult.items[w.id], 1, worldFilter);
+      const priced = priceForQuantity(priceResult.items[w.id], 1, worldFilter, w.isCrystal);
       if (!priced){
         const hasAnyListings = !!(priceResult.items[w.id].listings && priceResult.items[w.id].listings.length);
         w.unit = null; w.listingWorld = null; w.outlier = false; w.typicalPrice = null; w.checkedAt = now;
