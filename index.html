@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lycaa's Slave</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23faf4e4' stroke='%236b2c20' stroke-width='3'/%3E%3Cpath d='M18 40 L18 22 Q24 18 30 22 L30 40 Q24 36 18 40 Z' fill='%238c3a2b' stroke='%233a2f22' stroke-width='1'/%3E%3Cpath d='M46 40 L46 22 Q40 18 34 22 L34 40 Q40 36 46 40 Z' fill='%238c3a2b' stroke='%233a2f22' stroke-width='1'/%3E%3Ccircle cx='24' cy='48' r='8' fill='%23e8dcc0' stroke='%233a2f22' stroke-width='2'/%3E%3Ctext x='24' y='52' font-family='Georgia,serif' font-size='11' font-weight='700' fill='%233a2f22' text-anchor='middle'%3EG%3C/text%3E%3C/svg%3E">
 <style>
   :root{
     --bg:#e8dcc0; --paper:#f6efdc; --panel:#faf4e4; --panel2:#f0e6cc;
@@ -103,12 +104,66 @@
     background:var(--panel2); color:var(--ink); border:1px solid var(--border);
   }
   .copy-confirm{color:var(--good); font-style:italic; font-size:.85rem; align-self:center;}
+
+  .brand-row{display:flex; align-items:center; gap:14px; margin-bottom:2px;}
+  .brand-row svg{flex-shrink:0;}
+  .brand-text h1{margin:0;}
+
+  .tabs{display:flex; gap:6px; margin-bottom:16px; border-bottom:2px solid var(--border);}
+  .tab-btn{
+    background:transparent; border:1px solid transparent; border-bottom:none; color:var(--dim);
+    font-weight:700; padding:8px 16px; border-radius:2px 2px 0 0; box-shadow:none;
+  }
+  .tab-btn.active{
+    background:var(--panel); color:var(--accent); border-color:var(--border);
+    position:relative; top:2px;
+  }
+  .tab-panel.hidden{display:none;}
+
+  .ing-name-btn{
+    background:none; border:none; padding:0; color:var(--ink); font-family:inherit; font-size:inherit;
+    text-align:left; cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px;
+  }
+  .ing-name-btn:hover{color:var(--accent);}
+  .ing-detail-row td{background:var(--panel2); padding:10px 14px; border-bottom:1px solid var(--border);}
+  .acq-tags{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px;}
+  .acq-tag{
+    display:inline-block; background:var(--paper); border:1px solid var(--border); color:var(--ink);
+    font-size:.75rem; padding:3px 9px; border-radius:12px; font-style:italic;
+  }
+  .acq-link{font-size:.78rem;}
+
+  .lookup-result{margin-top:4px;}
+  .lookup-result h3{margin:0 0 4px;}
+
+  #basketBar{margin-bottom:16px;}
+  .basket-item{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:8px 0; border-bottom:1px dashed var(--border); font-size:.9rem;
+  }
+  .basket-item:last-child{border-bottom:none;}
+  .basket-remove{padding:2px 8px; font-size:.75rem;}
 </style>
 </head>
 <body>
 <div class="app">
-  <h1>Lycaa's Slave</h1>
-  <p class="sub">Fetches material prices, so you know what it'll cost to craft.</p>
+  <div class="brand-row">
+    <svg width="56" height="56" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="32" cy="32" r="30" fill="#faf4e4" stroke="#6b2c20" stroke-width="2.5"/>
+      <circle cx="32" cy="32" r="25" fill="none" stroke="#cdbb92" stroke-width="1" stroke-dasharray="2 3"/>
+      <path d="M18 40 L18 22 Q24 18 30 22 L30 40 Q24 36 18 40 Z" fill="#8c3a2b" stroke="#3a2f22" stroke-width="1"/>
+      <path d="M46 40 L46 22 Q40 18 34 22 L34 40 Q40 36 46 40 Z" fill="#8c3a2b" stroke="#3a2f22" stroke-width="1"/>
+      <line x1="32" y1="21" x2="32" y2="39" stroke="#3a2f22" stroke-width="1"/>
+      <line x1="40" y1="20" x2="50" y2="8" stroke="#3a2f22" stroke-width="2" stroke-linecap="round"/>
+      <path d="M50 8 Q55 5 52 13 Q47 12 50 8 Z" fill="#f6efdc" stroke="#3a2f22" stroke-width="1"/>
+      <circle cx="22" cy="48" r="7" fill="#e8dcc0" stroke="#3a2f22" stroke-width="1.5"/>
+      <text x="22" y="52" font-family="Georgia, serif" font-size="9" font-weight="700" fill="#3a2f22" text-anchor="middle">G</text>
+    </svg>
+    <div class="brand-text">
+      <h1>Lycaa's Slave</h1>
+      <p class="sub" style="margin:0;">Fetches material prices, so you know what it'll cost to craft.</p>
+    </div>
+  </div>
 
   <div id="fileWarning" class="panel warn-banner hidden">
     <p><b>Heads up:</b> you appear to have opened this straight from a file on your computer.
@@ -117,65 +172,127 @@
     whoever gave you this to host it somewhere (GitHub Pages, etc.) instead of sending you the raw file.</p>
   </div>
 
-  <details class="panel" id="tutorial" open>
-    <summary>How this works (tap to collapse)</summary>
-    <ol>
-      <li>Go to the FFXIV wiki and find the item or piece of gear you want to craft.</li>
-      <li>Copy that page's URL and paste it in the box below.</li>
-      <li>Click <b>"Look up recipe"</b> — the slave goes and reads the page for you.</li>
-      <li>Click <b>"Get prices"</b> and wait for the slave to bring back a receipt. It only shops on the <b>Light</b> data center — that's not a setting you can change.</li>
-    </ol>
-    <p class="recipe-meta" style="margin-bottom:0;">If it explodes, hit "Copy error for Lycaa" on the error card and send it over.</p>
-  </details>
-
-  <div class="panel">
-    <div class="row">
-      <div class="field">
-        <label for="wikiUrl">Wiki page URL</label>
-        <input type="text" id="wikiUrl" placeholder="https://ffxiv.consolegameswiki.com/wiki/AR-Caean_Velvet_Top_of_Striking">
+  <div class="panel" id="basketBar">
+    <div class="row" style="align-items:center; margin-bottom:0;">
+      <button id="basketToggleBtn" class="secondary">🧺 Basket (<span id="basketCount">0</span>)</button>
+      <span class="recipe-meta" style="margin:0; flex:1;">Add things you want made, then copy the list for Lycaa.</span>
+    </div>
+    <div id="basketPanel" class="hidden" style="margin-top:12px;">
+      <div id="basketItems"></div>
+      <div class="row" style="margin-top:10px;">
+        <button id="copyBasketBtn">Copy basket for Lycaa</button>
+        <button id="clearBasketBtn" class="secondary">Clear basket</button>
+        <span id="basketCopyConfirm" class="copy-confirm hidden">Copied. Send it over.</span>
       </div>
     </div>
-    <div class="row">
-      <button id="lookupBtn">Look up recipe</button>
-    </div>
   </div>
 
-  <div id="itemInfo" class="panel hidden">
-    <h2 id="itemName" style="margin:0 0 4px; color:var(--ink);"></h2>
-    <div class="recipe-meta" id="recipeMeta"></div>
-    <div class="row" id="recipeRow">
-      <div class="field" style="max-width:320px;">
-        <label for="recipeSelect">Recipe (if more than one job can craft it)</label>
-        <select id="recipeSelect"></select>
-      </div>
-    </div>
-    <div class="row">
-      <button id="priceBtn">Get prices (Light data center)</button>
-    </div>
+  <div class="tabs">
+    <button class="tab-btn active" id="tabBtnCraft">Craft Cost</button>
+    <button class="tab-btn" id="tabBtnLookup">Item Lookup</button>
   </div>
 
-  <div id="friendlyStatus" class="friendly-status hidden">
-    <span class="spinner-emoji" id="spinnerEmoji">🪙</span>
-    <span id="friendlyText">Thinking...</span>
-  </div>
-
-  <div id="errorCard" class="panel error-card hidden">
-    <p class="funny-line" id="errorFunny"></p>
-    <div class="row">
-      <button id="copyErrorBtn" class="secondary">Copy error for Lycaa</button>
-      <span id="copyConfirm" class="copy-confirm hidden">Copied. Go forth.</span>
-    </div>
-    <details>
-      <summary style="cursor:pointer; color:var(--dim); font-style:italic; font-size:.8rem;">Technical details</summary>
-      <pre id="errorTech" style="white-space:pre-wrap; font-size:.78rem; color:var(--dim); margin-top:8px;"></pre>
+  <div id="tabCraft" class="tab-panel">
+    <details class="panel" id="tutorial" open>
+      <summary>How this works (tap to collapse)</summary>
+      <ol>
+        <li>Go to the FFXIV wiki and find the item or piece of gear you want to craft.</li>
+        <li>Copy that page's URL and paste it in the box below.</li>
+        <li>Click <b>"Look up recipe"</b> — the slave goes and reads the page for you.</li>
+        <li>Click <b>"Get prices"</b> and wait for the slave to bring back a receipt. It only shops on the <b>Light</b> data center — that's not a setting you can change.</li>
+        <li>Click any ingredient's name in the results to see how it's actually obtained (gathered, bought, desynthed, etc).</li>
+      </ol>
+      <p class="recipe-meta" style="margin-bottom:0;">If it explodes, hit "Copy error for Lycaa" on the error card and send it over.</p>
     </details>
+
+    <div class="panel">
+      <div class="row">
+        <div class="field">
+          <label for="wikiUrl">Wiki page URL</label>
+          <input type="text" id="wikiUrl" placeholder="https://ffxiv.consolegameswiki.com/wiki/AR-Caean_Velvet_Top_of_Striking">
+        </div>
+      </div>
+      <div class="row">
+        <button id="lookupBtn">Look up recipe</button>
+      </div>
+    </div>
+
+    <div id="itemInfo" class="panel hidden">
+      <h2 id="itemName" style="margin:0 0 4px; color:var(--ink);"></h2>
+      <div class="recipe-meta" id="recipeMeta"></div>
+      <div class="row" id="recipeRow">
+        <div class="field" style="max-width:320px;">
+          <label for="recipeSelect">Recipe (if more than one job can craft it)</label>
+          <select id="recipeSelect"></select>
+        </div>
+      </div>
+      <div class="row">
+        <button id="priceBtn">Get prices (Light data center)</button>
+        <button id="addBasketBtn" class="secondary">Add to basket</button>
+      </div>
+    </div>
+
+    <div id="friendlyStatus" class="friendly-status hidden">
+      <span class="spinner-emoji" id="spinnerEmoji">🪙</span>
+      <span id="friendlyText">Thinking...</span>
+    </div>
+
+    <div id="errorCard" class="panel error-card hidden">
+      <p class="funny-line" id="errorFunny"></p>
+      <div class="row">
+        <button id="copyErrorBtn" class="secondary">Copy error for Lycaa</button>
+        <span id="copyConfirm" class="copy-confirm hidden">Copied. Go forth.</span>
+      </div>
+      <details>
+        <summary style="cursor:pointer; color:var(--dim); font-style:italic; font-size:.8rem;">Technical details</summary>
+        <pre id="errorTech" style="white-space:pre-wrap; font-size:.78rem; color:var(--dim); margin-top:8px;"></pre>
+      </details>
+    </div>
+
+    <details id="logDetails">
+      <summary>Technical log (for the curious, or for Lycaa)</summary>
+      <pre id="log"></pre>
+    </details>
+    <div id="results"></div>
   </div>
 
-  <details id="logDetails">
-    <summary>Technical log (for the curious, or for Lycaa)</summary>
-    <pre id="log"></pre>
-  </details>
-  <div id="results"></div>
+  <div id="tabLookup" class="tab-panel hidden">
+    <div class="panel">
+      <p class="recipe-meta" style="margin-top:0;">Type an item's name (e.g. <i>Chondrite Ingot</i>), or paste its wiki link directly, and the slave will report how it's actually obtained.</p>
+      <div class="row">
+        <div class="field">
+          <label for="lookupInput">Item name or wiki URL</label>
+          <input type="text" id="lookupInput" placeholder="Chondrite Ingot">
+        </div>
+      </div>
+      <div class="row">
+        <button id="lookupItemBtn">Look it up</button>
+      </div>
+    </div>
+
+    <div id="lookupFriendlyStatus" class="friendly-status hidden">
+      <span class="spinner-emoji">🪙</span>
+      <span id="lookupFriendlyText">Thinking...</span>
+    </div>
+
+    <div id="lookupErrorCard" class="panel error-card hidden">
+      <p class="funny-line" id="lookupErrorFunny"></p>
+      <div class="row">
+        <button id="lookupCopyErrorBtn" class="secondary">Copy error for Lycaa</button>
+        <span id="lookupCopyConfirm" class="copy-confirm hidden">Copied. Go forth.</span>
+      </div>
+      <details>
+        <summary style="cursor:pointer; color:var(--dim); font-style:italic; font-size:.8rem;">Technical details</summary>
+        <pre id="lookupErrorTech" style="white-space:pre-wrap; font-size:.78rem; color:var(--dim); margin-top:8px;"></pre>
+      </details>
+    </div>
+
+    <details id="lookupLogDetails">
+      <summary>Technical log (for the curious, or for Lycaa)</summary>
+      <pre id="lookupLog"></pre>
+    </details>
+    <div id="lookupResults"></div>
+  </div>
 
   <p class="footer-note">the slave fetches; the slave does not explain itself.</p>
 </div>
@@ -189,6 +306,16 @@ const FIXED_WORLD = 'Light';
 if (location.protocol === 'file:'){
   document.getElementById('fileWarning').classList.remove('hidden');
 }
+
+// --- Tabs ---
+function showTab(tab){
+  document.getElementById('tabCraft').classList.toggle('hidden', tab !== 'craft');
+  document.getElementById('tabLookup').classList.toggle('hidden', tab !== 'lookup');
+  document.getElementById('tabBtnCraft').classList.toggle('active', tab === 'craft');
+  document.getElementById('tabBtnLookup').classList.toggle('active', tab === 'lookup');
+}
+document.getElementById('tabBtnCraft').addEventListener('click', ()=>showTab('craft'));
+document.getElementById('tabBtnLookup').addEventListener('click', ()=>showTab('lookup'));
 
 // Used for JSON APIs (Garland Tools, Universalis) — no "reader" services here since
 // those reformat content and would break JSON.parse.
@@ -218,24 +345,6 @@ const STAGE_MESSAGES = {
   ingredients: ['Chasing down what these mats are even called...', 'Interrogating the ingredients one by one...', 'Reading tiny item labels...'],
   prices:      ['Storming the Market Board...', 'Haggling with retainers...', 'Counting gil (badly, with its paws)...', 'Checking every world\'s price tags...'],
 };
-let statusInterval = null;
-function setStage(stage){
-  const el = document.getElementById('friendlyStatus');
-  const textEl = document.getElementById('friendlyText');
-  el.classList.remove('hidden');
-  const msgs = STAGE_MESSAGES[stage] || ['Working on it...'];
-  let i = 0;
-  textEl.textContent = msgs[0];
-  clearInterval(statusInterval);
-  statusInterval = setInterval(()=>{
-    i = (i + 1) % msgs.length;
-    textEl.textContent = msgs[i];
-  }, 1700);
-}
-function stopFriendlyStatus(){
-  clearInterval(statusInterval);
-  document.getElementById('friendlyStatus').classList.add('hidden');
-}
 
 const FUNNY_ERROR_LINES = [
   "The slave tripped, dropped the ledger, and is refusing to make eye contact.",
@@ -244,46 +353,86 @@ const FUNNY_ERROR_LINES = [
   "The slave went to fetch prices and came back with nothing but excuses.",
   "Somewhere, a server said 'no.' The slave took it personally.",
 ];
-function showError(err){
-  document.getElementById('errorCard').classList.remove('hidden');
-  document.getElementById('errorFunny').textContent =
-    FUNNY_ERROR_LINES[Math.floor(Math.random() * FUNNY_ERROR_LINES.length)];
-  document.getElementById('errorTech').textContent = err.message;
-  document.getElementById('logDetails').open = true;
-}
-function hideError(){
-  document.getElementById('errorCard').classList.add('hidden');
-}
-document.getElementById('copyErrorBtn').addEventListener('click', async ()=>{
-  const text = 'Lycaa\'s Slave error report:\n' + document.getElementById('errorTech').textContent;
-  try{
-    await navigator.clipboard.writeText(text);
-  }catch(e){
-    const ta = document.createElement('textarea');
-    ta.value = text; document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
+
+// Each tab (Craft Cost / Item Lookup) gets its own independent set of these —
+// so an error or a "still thinking" spinner from one search never lingers
+// around confusing a totally different, unrelated search.
+function createUI(ids){
+  let statusInterval = null;
+  function log(msg, isErr){
+    const el = document.getElementById(ids.log);
+    const line = document.createElement('div');
+    if (isErr) line.className = 'log-err';
+    line.textContent = msg;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
   }
-  const c = document.getElementById('copyConfirm');
-  c.classList.remove('hidden');
-  setTimeout(()=>c.classList.add('hidden'), 2500);
-});
-
-function log(msg, isErr){
-  const el = document.getElementById('log');
-  const line = document.createElement('div');
-  if (isErr) line.className = 'log-err';
-  line.textContent = msg;
-  el.appendChild(line);
-  el.scrollTop = el.scrollHeight;
+  function clearLog(){ document.getElementById(ids.log).innerHTML = ''; }
+  function setStage(stage){
+    const el = document.getElementById(ids.friendlyStatus);
+    const textEl = document.getElementById(ids.friendlyText);
+    el.classList.remove('hidden');
+    const msgs = STAGE_MESSAGES[stage] || ['Working on it...'];
+    let i = 0;
+    textEl.textContent = msgs[0];
+    clearInterval(statusInterval);
+    statusInterval = setInterval(()=>{
+      i = (i + 1) % msgs.length;
+      textEl.textContent = msgs[i];
+    }, 1700);
+  }
+  function stopStatus(){
+    clearInterval(statusInterval);
+    document.getElementById(ids.friendlyStatus).classList.add('hidden');
+  }
+  function showError(err){
+    document.getElementById(ids.errorCard).classList.remove('hidden');
+    document.getElementById(ids.errorFunny).textContent =
+      FUNNY_ERROR_LINES[Math.floor(Math.random() * FUNNY_ERROR_LINES.length)];
+    document.getElementById(ids.errorTech).textContent = err.message;
+    document.getElementById(ids.logDetails).open = true;
+  }
+  function hideError(){
+    document.getElementById(ids.errorCard).classList.add('hidden');
+  }
+  document.getElementById(ids.copyErrorBtn).addEventListener('click', async ()=>{
+    const text = 'Lycaa\'s Slave error report:\n' + document.getElementById(ids.errorTech).textContent;
+    try{
+      await navigator.clipboard.writeText(text);
+    }catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+    }
+    const c = document.getElementById(ids.copyConfirm);
+    c.classList.remove('hidden');
+    setTimeout(()=>c.classList.add('hidden'), 2500);
+  });
+  return {log, clearLog, setStage, stopStatus, showError, hideError};
 }
-function clearLog(){ document.getElementById('log').innerHTML = ''; }
 
-async function fetchViaProxies(url, proxies, timeoutMs){
+const craftUI = createUI({
+  log:'log', friendlyStatus:'friendlyStatus', friendlyText:'friendlyText',
+  errorCard:'errorCard', errorFunny:'errorFunny', errorTech:'errorTech', logDetails:'logDetails',
+  copyErrorBtn:'copyErrorBtn', copyConfirm:'copyConfirm'
+});
+const lookupUI = createUI({
+  log:'lookupLog', friendlyStatus:'lookupFriendlyStatus', friendlyText:'lookupFriendlyText',
+  errorCard:'lookupErrorCard', errorFunny:'lookupErrorFunny', errorTech:'lookupErrorTech', logDetails:'lookupLogDetails',
+  copyErrorBtn:'lookupCopyErrorBtn', copyConfirm:'lookupCopyConfirm'
+});
+// Clear a tab's error card the instant its input changes — a stale error card
+// sitting there while you type a totally different item looks like a bug.
+document.getElementById('wikiUrl').addEventListener('input', ()=>craftUI.hideError());
+document.getElementById('lookupInput').addEventListener('input', ()=>lookupUI.hideError());
+
+async function fetchViaProxies(url, proxies, logFn, timeoutMs){
   // Race every route in parallel instead of one-at-a-time — a sequential chain of
   // five 15s timeouts could take 75 seconds to fail, which just looks like a frozen
   // page. Racing means we're bounded by the slowest single attempt (~15s worst case),
   // and usually a lot faster since one of them answers quickly.
   timeoutMs = timeoutMs || 15000;
+  logFn = logFn || (()=>{});
   const attempts = [];
   const tasks = proxies.map(({label, wrap}) => {
     const target = wrap(url);
@@ -293,22 +442,22 @@ async function fetchViaProxies(url, proxies, timeoutMs){
       .then(async res => {
         if (!res.ok){
           const msg = label + ': HTTP ' + res.status;
-          attempts.push(msg); log('  [' + label + '] HTTP ' + res.status);
+          attempts.push(msg); logFn('  [' + label + '] HTTP ' + res.status);
           throw new Error(msg);
         }
         const body = await res.text();
         if (!body || body.trim().length === 0){
           const msg = label + ': empty response';
-          attempts.push(msg); log('  [' + label + '] empty response');
+          attempts.push(msg); logFn('  [' + label + '] empty response');
           throw new Error(msg);
         }
-        log('  [' + label + '] got it');
+        logFn('  [' + label + '] got it');
         return body;
       })
       .catch(e => {
         if (e.message && (e.message.startsWith(label + ':'))) throw e; // already logged above
         const msg = label + ': ' + (e.name === 'AbortError' ? 'timed out' : e.message);
-        attempts.push(msg); log('  [' + label + '] ' + (e.name === 'AbortError' ? 'timed out' : e.message));
+        attempts.push(msg); logFn('  [' + label + '] ' + (e.name === 'AbortError' ? 'timed out' : e.message));
         throw e;
       })
       .finally(()=> clearTimeout(timer));
@@ -319,21 +468,73 @@ async function fetchViaProxies(url, proxies, timeoutMs){
     throw new Error('every fetch route failed for ' + url + ' — [' + attempts.join(' | ') + ']');
   }
 }
-async function fetchHtml(url, timeoutMs){
-  return fetchViaProxies(url, PROXIES_HTML, timeoutMs);
+async function fetchHtml(url, logFn, timeoutMs){
+  return fetchViaProxies(url, PROXIES_HTML, logFn, timeoutMs);
 }
-async function fetchText(url, timeoutMs){
-  return fetchViaProxies(url, PROXIES_JSON, timeoutMs);
+async function fetchText(url, logFn, timeoutMs){
+  return fetchViaProxies(url, PROXIES_JSON, logFn, timeoutMs);
 }
-async function fetchJson(url, timeoutMs){
-  const t = await fetchText(url, timeoutMs);
+async function fetchJson(url, logFn, timeoutMs){
+  const t = await fetchText(url, logFn, timeoutMs);
   try{ return JSON.parse(t); }
   catch(e){ throw new Error('Got a non-JSON response from ' + url); }
+}
+
+// Turns an item name into the wiki's usual URL pattern. Best-effort only — used
+// for a convenience link, never for fetching, so an occasional miss is harmless.
+function wikiUrlForName(name){
+  return 'https://ffxiv.consolegameswiki.com/wiki/' + encodeURIComponent(name.trim().replace(/\s+/g, '_'));
+}
+
+// Reads Garland Tools' raw item fields (already fetched — no extra request) and
+// turns them into plain-English tags: how do you actually get this thing?
+function summarizeAcquisition(item){
+  const tags = [];
+  if (item.craft && item.craft.length){
+    const jobs = [...new Set(item.craft.map(c => JOB_NAMES[c.job] || ('Job ' + c.job)))];
+    tags.push('Crafted (' + jobs.join(', ') + ')');
+  }
+  if (item.nodes && item.nodes.length) tags.push('Gathered');
+  if (item.ventures && item.ventures.length) tags.push('Retainer Venture');
+  if (item.voyages && item.voyages.length) tags.push('Airship/Submarine Voyage');
+  if (item.desynthedFrom && item.desynthedFrom.length) tags.push('Desynthesis');
+  if (item.drops && item.drops.length) tags.push('Monster Drop');
+  if (item.instances && item.instances.length) tags.push('Dungeon/Trial/Raid Drop');
+  if (item.quests && item.quests.length) tags.push('Quest Reward');
+  if (item.treasure && item.treasure.length) tags.push('Treasure Map');
+  if (item.leves && item.leves.length) tags.push('Levequest');
+  if (item.tradeShops && item.tradeShops.length){
+    const shops = [...new Set(item.tradeShops.map(s=>s.shop).filter(Boolean))];
+    tags.push(shops.length ? ('Special Shop (' + shops.join(', ') + ')') : 'Special Shop');
+  }
+  if (!tags.length) tags.push('Source unclear — check the wiki link below');
+  return tags;
 }
 
 function extractGarlandId(html){
   const m = html.match(/garlandtools\.org\/db\/#item\/(\d+)/);
   return m ? m[1] : null;
+}
+
+// When an item has no crafting recipe, peek at the wiki's own "Acquisition"
+// section (already fetched, no extra request needed) to say *how* it's actually
+// obtained instead of just "there's no recipe."
+function describeAcquisition(html){
+  const idx = html.indexOf('Acquisition');
+  if (idx === -1) return null;
+  const enders = ['Used For', 'Gallery', 'Notes', 'See also', 'Trivia'];
+  let endIdx = html.length;
+  for (const marker of enders){
+    const pos = html.indexOf(marker, idx + 'Acquisition'.length);
+    if (pos !== -1 && pos < endIdx) endIdx = pos;
+  }
+  const section = html.slice(idx, endIdx).replace(/<[^>]+>/g, ' ');
+  const KEYWORDS = ['Duties','Quests','Purchase','Gathering','Desynthesis','Reduction','Treasure Map','Voyage','Achievements','Instances','Fates','From Items','Leves','Loot'];
+  const found = [];
+  for (const kw of KEYWORDS){
+    if (section.includes(kw) && !found.includes(kw)) found.push(kw);
+  }
+  return found.length ? found : null;
 }
 
 let resolvedItem = null; // {name, crafts:[...]}
@@ -344,8 +545,8 @@ async function lookupRecipe(){
   if (!urlInput){ alert('Paste a wiki page URL first.'); return; }
   document.getElementById('itemInfo').classList.add('hidden');
   document.getElementById('results').innerHTML = '';
-  hideError();
-  clearLog();
+  craftUI.hideError();
+  craftUI.clearLog();
   const btn = document.getElementById('lookupBtn');
   btn.disabled = true;
   try{
@@ -353,20 +554,24 @@ async function lookupRecipe(){
     try{ pageUrl = new URL(urlInput).toString(); }
     catch(e){ throw new Error('That doesn\'t look like a valid URL.'); }
 
-    setStage('wiki');
-    log('Fetching wiki page...');
-    const html = await fetchHtml(pageUrl);
+    craftUI.setStage('wiki');
+    craftUI.log('Fetching wiki page...');
+    const html = await fetchHtml(pageUrl, craftUI.log);
 
     const gtId = extractGarlandId(html);
     if (!gtId) throw new Error('Could not find a market/item link on this page. Make sure it\'s an item page on ffxiv.consolegameswiki.com.');
-    log('Found item ID ' + gtId + '. Fetching recipe data from Garland Tools...');
+    craftUI.log('Found item ID ' + gtId + '. Fetching recipe data from Garland Tools...');
 
-    setStage('recipe');
-    const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json');
+    craftUI.setStage('recipe');
+    const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json', craftUI.log);
     const name = itemData.item.name;
     const crafts = itemData.item.craft || [];
     if (crafts.length === 0){
-      throw new Error('"' + name + '" has no crafting recipe on record (it may be gathered, a drop, or purchased instead, so there are no craft materials to price).');
+      const methods = describeAcquisition(html);
+      const how = methods
+        ? ('It looks like it\'s actually obtained via ' + methods.join(', ') + ' — not crafted, so there\'s nothing here to price.')
+        : 'It has no crafting recipe on record, so there\'s nothing here to price.';
+      throw new Error('"' + name + '" isn\'t a craftable item. ' + how);
     }
     resolvedItem = {name, gtId, crafts};
 
@@ -381,32 +586,32 @@ async function lookupRecipe(){
       ? ('This item can be crafted ' + crafts.length + ' different ways — pick one below.')
       : ('Recipe: ' + (JOB_NAMES[crafts[0].job] || crafts[0].job) + ' · Lv.' + crafts[0].lvl);
     document.getElementById('itemInfo').classList.remove('hidden');
-    log('Ready. Click "Get prices" (Light data center).');
+    craftUI.log('Ready. Click "Get prices" (Light data center).');
   }catch(e){
-    log('Error: ' + e.message, true);
-    showError(e);
+    craftUI.log('Error: ' + e.message, true);
+    craftUI.showError(e);
   }finally{
-    stopFriendlyStatus();
+    craftUI.stopStatus();
     btn.disabled = false;
   }
 }
 
 async function resolveIngredients(recipe){
   return Promise.all(recipe.ingredients.map(async ing => {
-    log('  resolving ingredient ' + ing.id + '...');
+    craftUI.log('  resolving ingredient ' + ing.id + '...');
     try{
-      const data = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + ing.id + '.json');
-      return { id: ing.id, amount: ing.amount, name: data.item.name, tradeable: !!data.item.tradeable };
+      const data = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + ing.id + '.json', craftUI.log);
+      return { id: ing.id, amount: ing.amount, name: data.item.name, tradeable: !!data.item.tradeable, raw: data.item };
     }catch(e){
-      return { id: ing.id, amount: ing.amount, name: 'Item ' + ing.id, tradeable: false, resolveFailed: true };
+      return { id: ing.id, amount: ing.amount, name: 'Item ' + ing.id, tradeable: false, resolveFailed: true, raw: null };
     }
   }));
 }
 
-async function fetchPrices(world, ids){
+async function fetchPrices(world, ids, logFn){
   if (ids.length === 0) return {items:{}, unresolved:[]};
   const url = 'https://universalis.app/api/v2/' + encodeURIComponent(world) + '/' + ids.join(',') + '?listings=20&entries=0';
-  const data = await fetchJson(url);
+  const data = await fetchJson(url, logFn);
   if (data.items) return {items:data.items, unresolved:data.unresolvedItems || []};
   if (data.itemID) return {items:{[data.itemID]:data}, unresolved:[]};
   return {items:{}, unresolved: ids};
@@ -427,22 +632,22 @@ async function getPrices(){
   const btn = document.getElementById('priceBtn');
   btn.disabled = true;
   document.getElementById('results').innerHTML = '';
-  hideError();
-  clearLog();
+  craftUI.hideError();
+  craftUI.clearLog();
   try{
     const recipeIdx = parseInt(document.getElementById('recipeSelect').value || '0', 10);
     const recipe = resolvedItem.crafts[recipeIdx];
 
-    setStage('ingredients');
-    log('Resolving ' + recipe.ingredients.length + ' ingredient(s)...');
+    craftUI.setStage('ingredients');
+    craftUI.log('Resolving ' + recipe.ingredients.length + ' ingredient(s)...');
     currentIngredients = await resolveIngredients(recipe);
 
     const tradeableIds = currentIngredients.filter(i=>i.tradeable && !i.resolveFailed).map(i=>i.id);
-    setStage('prices');
-    log('Fetching live prices for ' + world + '...');
+    craftUI.setStage('prices');
+    craftUI.log('Fetching live prices for ' + world + '...');
     let priceResult;
     try{
-      priceResult = await fetchPrices(world, tradeableIds);
+      priceResult = await fetchPrices(world, tradeableIds, craftUI.log);
     }catch(e){
       throw new Error('Universalis lookup failed for the ' + world + ' data center. (' + e.message + ')');
     }
@@ -472,14 +677,24 @@ async function getPrices(){
     });
 
     renderResults(resolvedItem.name, recipe, world, rows);
-    log('Done.');
+    craftUI.log('Done.');
   }catch(e){
-    log('Error: ' + e.message, true);
-    showError(e);
+    craftUI.log('Error: ' + e.message, true);
+    craftUI.showError(e);
   }finally{
-    stopFriendlyStatus();
+    craftUI.stopStatus();
     btn.disabled = false;
   }
+}
+
+function renderAcquisitionDetail(row){
+  if (!row.raw){
+    return '<p class="recipe-meta" style="margin:0;">No extra data available for this one — try the Item Lookup tab.</p>';
+  }
+  const tags = summarizeAcquisition(row.raw);
+  const wikiLink = wikiUrlForName(row.name);
+  return '<div class="acq-tags">' + tags.map(t=>'<span class="acq-tag">'+t+'</span>').join('') + '</div>'
+    + '<p class="acq-link" style="margin:6px 0 0;"><a href="' + wikiLink + '" target="_blank" rel="noopener">View on wiki →</a></p>';
 }
 
 function renderResults(itemName, recipe, world, rows){
@@ -488,31 +703,36 @@ function renderResults(itemName, recipe, world, rows){
   let anyProhibited = false;
   let anyNoListings = false;
 
-  const bodyRows = rows.map(r=>{
+  const bodyRows = rows.map((r, idx)=>{
+    const nameCell = '<button class="ing-name-btn" data-idx="' + idx + '">' + r.name + '</button>';
+    let row;
     if (r.status === 'prohibited'){
       anyProhibited = true;
-      return `<tr>
-        <td>${r.name}</td>
+      row = `<tr>
+        <td>${nameCell}</td>
         <td class="num">${r.amount}</td>
         <td colspan="3" class="prohibited">Market prohibited (not sellable on the market board)</td>
       </tr>`;
-    }
-    if (r.status === 'nolistings'){
+    } else if (r.status === 'nolistings'){
       anyNoListings = true;
-      return `<tr>
-        <td>${r.name}</td>
+      row = `<tr>
+        <td>${nameCell}</td>
         <td class="num">${r.amount}</td>
         <td colspan="3" class="nolistings">No current listings on ${world}</td>
       </tr>`;
+    } else {
+      total += r.subtotal;
+      row = `<tr>
+        <td>${nameCell}</td>
+        <td class="num">${r.amount}</td>
+        <td class="num">${fmt(r.unit)}g ${r.hq ? '(HQ)' : ''}</td>
+        <td class="world-tag">${r.listingWorld}</td>
+        <td class="num">${fmt(r.subtotal)}g</td>
+      </tr>`;
     }
-    total += r.subtotal;
-    return `<tr>
-      <td>${r.name}</td>
-      <td class="num">${r.amount}</td>
-      <td class="num">${fmt(r.unit)}g ${r.hq ? '(HQ)' : ''}</td>
-      <td class="world-tag">${r.listingWorld}</td>
-      <td class="num">${fmt(r.subtotal)}g</td>
-    </tr>`;
+    const detail = '<tr class="ing-detail-row hidden" data-detail-idx="' + idx + '"><td colspan="5">'
+      + renderAcquisitionDetail(r) + '</td></tr>';
+    return row + detail;
   }).join('');
 
   document.getElementById('results').innerHTML = `
@@ -533,13 +753,176 @@ function renderResults(itemName, recipe, world, rows){
       ${anyProhibited ? '<p class="recipe-meta prohibited">Some ingredients are market prohibited and excluded from the total.</p>' : ''}
       ${anyNoListings ? '<p class="recipe-meta nolistings">Some ingredients currently have no one selling on ' + world + '.</p>' : ''}
       <p class="recipe-meta">Prices are the cheapest single listing found across the Light data center at lookup time. They change constantly.</p>
+      <p class="recipe-meta" style="margin-bottom:12px;">Click any ingredient's name to see how it's actually obtained.</p>
+      <div class="row" style="margin-bottom:0;">
+        <button id="addBasketFromResultsBtn" class="secondary">Add to basket (${fmt(total)}g)</button>
+      </div>
     </div>
   `;
+
+  document.querySelectorAll('.ing-name-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const idx = btn.dataset.idx;
+      const detailRow = document.querySelector('[data-detail-idx="' + idx + '"]');
+      if (detailRow) detailRow.classList.toggle('hidden');
+    });
+  });
+  const addBtn = document.getElementById('addBasketFromResultsBtn');
+  if (addBtn){
+    addBtn.addEventListener('click', ()=>{
+      addToBasket({ name: itemName, job: jobName, lvl: recipe.lvl, qty: 1, cost: total });
+    });
+  }
+}
+
+// --- Item Lookup tab: standalone "how do I get this?" search ---
+async function lookupItem(){
+  const raw = document.getElementById('lookupInput').value.trim();
+  if (!raw){ alert('Type an item name or paste a wiki URL.'); return; }
+  lookupUI.hideError();
+  lookupUI.clearLog();
+  document.getElementById('lookupResults').innerHTML = '';
+  const btn = document.getElementById('lookupItemBtn');
+  btn.disabled = true;
+  try{
+    let pageUrl;
+    if (/^https?:\/\//i.test(raw)){
+      try{ pageUrl = new URL(raw).toString(); }
+      catch(e){ throw new Error('That doesn\'t look like a valid URL.'); }
+    } else {
+      pageUrl = wikiUrlForName(raw);
+    }
+
+    lookupUI.setStage('wiki');
+    lookupUI.log('Fetching wiki page...');
+    const html = await fetchHtml(pageUrl, lookupUI.log);
+
+    const gtId = extractGarlandId(html);
+    if (!gtId) throw new Error('Could not find a market/item link on that page. Try the exact wiki spelling, or paste the full wiki URL instead.');
+    lookupUI.log('Found item ID ' + gtId + '. Fetching item data from Garland Tools...');
+
+    lookupUI.setStage('recipe');
+    const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json', lookupUI.log);
+    renderItemLookup(itemData.item);
+    lookupUI.log('Done.');
+  }catch(e){
+    lookupUI.log('Error: ' + e.message, true);
+    lookupUI.showError(e);
+  }finally{
+    lookupUI.stopStatus();
+    btn.disabled = false;
+  }
+}
+
+function renderItemLookup(item){
+  const tags = summarizeAcquisition(item);
+  const wikiLink = wikiUrlForName(item.name);
+  document.getElementById('lookupResults').innerHTML = `
+    <div class="panel lookup-result">
+      <h3>${item.name}</h3>
+      <p class="recipe-meta">${item.tradeable ? 'Sellable on the market board' : 'Market prohibited — cannot be sold'}${item.ilvl ? (' · Item Level ' + item.ilvl) : ''}</p>
+      <div class="acq-tags">${tags.map(t=>'<span class="acq-tag">'+t+'</span>').join('')}</div>
+      <p class="acq-link" style="margin:10px 0 0;"><a href="${wikiLink}" target="_blank" rel="noopener">View on wiki →</a></p>
+    </div>
+  `;
+}
+
+// --- Basket: a running list of "please craft me this" requests, kept in
+// localStorage so it survives reloads, meant to be copied and sent to Lycaa. ---
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); return true; }
+  catch(e){
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      return true;
+    }catch(e2){ return false; }
+  }
+}
+function loadBasket(){
+  try{ return JSON.parse(localStorage.getItem('lycaas_basket') || '[]'); }
+  catch(e){ return []; }
+}
+function saveBasket(list){ localStorage.setItem('lycaas_basket', JSON.stringify(list)); }
+function addToBasket(item){
+  const list = loadBasket();
+  const key = item.name + '::' + (item.job || '') + '::' + (item.lvl || '');
+  const existing = list.find(i => i.key === key);
+  if (existing){
+    existing.qty += item.qty || 1;
+    if (item.cost != null) existing.cost = item.cost;
+  } else {
+    list.push({ key, name: item.name, job: item.job || '', lvl: item.lvl || null, qty: item.qty || 1, cost: item.cost != null ? item.cost : null });
+  }
+  saveBasket(list);
+  renderBasket();
+  document.getElementById('basketPanel').classList.remove('hidden');
+}
+function removeFromBasket(key){
+  saveBasket(loadBasket().filter(i => i.key !== key));
+  renderBasket();
+}
+function clearBasket(){
+  if (!confirm('Empty the whole basket?')) return;
+  saveBasket([]);
+  renderBasket();
+}
+function renderBasket(){
+  const list = loadBasket();
+  document.getElementById('basketCount').textContent = list.reduce((s,i)=>s + i.qty, 0);
+  const body = document.getElementById('basketItems');
+  if (!list.length){
+    body.innerHTML = '<p class="recipe-meta" style="margin:0;">Basket\'s empty. Go find something to make the slave suffer for.</p>';
+    return;
+  }
+  body.innerHTML = list.map(i => `
+    <div class="basket-item">
+      <span>${i.qty}&times; ${i.name}${i.job ? (' <span class="world-tag">(' + i.job + (i.lvl ? (' Lv.' + i.lvl) : '') + ')</span>') : ''}</span>
+      <span>${i.cost != null ? (fmt(i.cost) + 'g') : 'not priced'} <button class="secondary basket-remove" data-key="${i.key}">✕</button></span>
+    </div>
+  `).join('');
+  body.querySelectorAll('.basket-remove').forEach(btn=>{
+    btn.addEventListener('click', ()=>removeFromBasket(btn.dataset.key));
+  });
+}
+async function copyBasket(){
+  const list = loadBasket();
+  if (!list.length){ alert('Basket is empty — add something first.'); return; }
+  const lines = list.map(i =>
+    i.qty + 'x ' + i.name +
+    (i.job ? (' (' + i.job + (i.lvl ? (' Lv.' + i.lvl) : '') + ')') : '') +
+    (i.cost != null ? (' — ~' + fmt(i.cost * i.qty) + 'g materials') : ' — not priced yet')
+  );
+  const knownTotal = list.filter(i => i.cost != null).reduce((s,i) => s + i.cost * i.qty, 0);
+  const text = 'Craft request list for Lycaa:\n\n' + lines.join('\n') +
+    (knownTotal ? ('\n\nEstimated total materials: ~' + fmt(knownTotal) + 'g') : '');
+  await copyText(text);
+  const c = document.getElementById('basketCopyConfirm');
+  c.classList.remove('hidden');
+  setTimeout(()=>c.classList.add('hidden'), 2500);
 }
 
 document.getElementById('lookupBtn').addEventListener('click', lookupRecipe);
 document.getElementById('priceBtn').addEventListener('click', getPrices);
 document.getElementById('wikiUrl').addEventListener('keydown', e=>{ if(e.key==='Enter') lookupRecipe(); });
+document.getElementById('addBasketBtn').addEventListener('click', ()=>{
+  if (!resolvedItem) return;
+  const recipeIdx = parseInt(document.getElementById('recipeSelect').value || '0', 10);
+  const recipe = resolvedItem.crafts[recipeIdx];
+  const jobName = JOB_NAMES[recipe.job] || ('Job ' + recipe.job);
+  addToBasket({ name: resolvedItem.name, job: jobName, lvl: recipe.lvl, qty: 1, cost: null });
+});
+
+document.getElementById('lookupItemBtn').addEventListener('click', lookupItem);
+document.getElementById('lookupInput').addEventListener('keydown', e=>{ if(e.key==='Enter') lookupItem(); });
+
+document.getElementById('basketToggleBtn').addEventListener('click', ()=>{
+  document.getElementById('basketPanel').classList.toggle('hidden');
+});
+document.getElementById('copyBasketBtn').addEventListener('click', copyBasket);
+document.getElementById('clearBasketBtn').addEventListener('click', clearBasket);
+renderBasket();
 </script>
 </body>
 </html>
