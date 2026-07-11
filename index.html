@@ -120,11 +120,11 @@
   .brand-row svg{flex-shrink:0;}
   .brand-text{flex:1;}
   .brand-text h1{margin:0;}
-  #themeToggleBtn{
+  #themeToggleBtn, #personalStatsBtn{
     background:var(--panel); border:1px solid var(--border); color:var(--ink);
     font-weight:400; padding:8px 14px; align-self:flex-start;
   }
-  #themeToggleBtn:hover{border-color:var(--accent-dim); color:var(--accent);}
+  #themeToggleBtn:hover, #personalStatsBtn:hover{border-color:var(--accent-dim); color:var(--accent);}
 
   .tabs{display:flex; gap:6px; margin-bottom:16px; border-bottom:2px solid var(--border);}
   .tab-btn{
@@ -232,6 +232,55 @@
 
   .economy-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px;}
   .economy-grid h4{color:var(--accent); font-size:.85rem; text-transform:uppercase; letter-spacing:.4px;}
+
+  /* --- Watchlist dashboard: same color scheme as the rest of the app, but a
+     denser stock-ticker layout instead of the shared table styling. Scoped
+     entirely under #tabWatch so nothing else on the page is affected. --- */
+  .watch-subtabs{display:flex; gap:4px; margin-bottom:14px; border-bottom:2px solid var(--border);}
+  .watch-subtab-btn{
+    background:transparent; border:1px solid transparent; border-bottom:none; color:var(--dim);
+    font-weight:400; padding:8px 16px 9px; border-radius:2px 2px 0 0; font-size:.85rem;
+  }
+  .watch-subtab-btn.active{
+    background:var(--panel); border-color:var(--border); color:var(--accent); font-weight:700;
+    margin-bottom:-2px; border-bottom:2px solid var(--panel);
+  }
+  .ticker-list{display:flex; flex-direction:column; gap:2px;}
+  .ticker-row{
+    display:grid; grid-template-columns:minmax(140px,2.2fr) minmax(90px,1.1fr) minmax(70px,.8fr) auto;
+    align-items:center; gap:12px; padding:11px 14px; background:var(--panel);
+    border:1px solid var(--border); border-radius:2px;
+  }
+  .ticker-row + .ticker-row{margin-top:-1px;}
+  .ticker-row.alert-firing{border-color:var(--bad); box-shadow:0 0 0 1px var(--bad) inset;}
+  .ticker-name{min-width:0;}
+  .ticker-name a{font-weight:700;}
+  .ticker-badges{margin-top:3px; display:flex; flex-wrap:wrap; gap:4px;}
+  .ticker-price{text-align:right; font-variant-numeric:tabular-nums;}
+  .ticker-price-num{font-size:1.1rem; font-weight:700; color:var(--ink);}
+  .ticker-price-meta{font-size:.7rem; color:var(--dim); font-style:italic; white-space:nowrap;}
+  .ticker-change{text-align:right; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .ticker-change.up{color:var(--bad);}
+  .ticker-change.down{color:var(--good);}
+  .ticker-change.flat{color:var(--dim); font-weight:400; font-style:italic;}
+  .ticker-actions{display:flex; gap:4px; justify-self:end;}
+  .ticker-icon-btn{
+    background:var(--panel2); border:1px solid var(--border); color:var(--dim);
+    padding:6px 9px; font-size:.8rem; border-radius:2px;
+  }
+  .ticker-icon-btn:hover{border-color:var(--accent-dim); color:var(--accent);}
+  .ticker-icon-btn.active{background:var(--accent); color:var(--paper); border-color:var(--accent);}
+  .ticker-expand{
+    display:none; background:var(--panel2); border:1px solid var(--border); border-top:none;
+    border-radius:0 0 2px 2px; padding:14px; margin-top:-3px; margin-bottom:1px;
+  }
+  .ticker-expand.open{display:block;}
+  .ticker-expand-section + .ticker-expand-section{margin-top:12px; padding-top:12px; border-top:1px dashed var(--border);}
+  @media (max-width:640px){
+    .ticker-row{grid-template-columns:1fr; text-align:left; gap:6px;}
+    .ticker-price, .ticker-change{text-align:left;}
+    .ticker-actions{justify-self:start;}
+  }
 </style>
 <script>
   // Applied immediately (before the rest of the page renders) so switching
@@ -276,9 +325,11 @@
       <h1>Lycaa's Slave</h1>
       <p class="sub" style="margin:0;">Fetches material prices, so you know what it'll cost to craft.</p>
     </div>
+    <button id="personalStatsBtn" type="button" title="Your lifetime stats across every tab" class="secondary">📜 Personal Stats</button>
     <button id="themeToggleBtn" type="button" title="Switch between light and dark paper">🌙 Dark</button>
   </div>
 
+  <div id="mainContent">
   <div id="fileWarning" class="panel warn-banner hidden">
     <p><b>Heads up:</b> you appear to have opened this straight from a file on your computer.
     A lot of browsers flatly refuse to let a local file talk to the internet, which means every
@@ -558,11 +609,6 @@
 
     <div id="watchAlertBanner" class="hidden"></div>
 
-    <details class="panel" id="slaveReportPanel">
-      <summary style="cursor:pointer; font-weight:700; color:var(--accent);">📜 The Slave's Report</summary>
-      <div id="slaveReportBody" style="margin-top:12px;"></div>
-    </details>
-
     <div id="watchFriendlyStatus" class="friendly-status hidden">
       <span class="spinner-emoji">🪙</span>
       <span id="watchFriendlyText">Thinking...</span>
@@ -587,13 +633,22 @@
       <pre id="watchLog"></pre>
     </details>
 
-    <div class="panel" id="watchEconomyPanel">
-      <h3 style="margin-top:0;">Your Watchlist Economy</h3>
-      <p class="recipe-meta">Movers among what you're actually watching — not the whole game's market, just yours.</p>
-      <div id="watchEconomy"><p class="recipe-meta" style="margin:0;">Add a few items and recheck prices a couple of times to see movers here.</p></div>
+    <div class="watch-subtabs">
+      <button class="watch-subtab-btn active" id="watchSubBtnList">📊 Watching</button>
+      <button class="watch-subtab-btn" id="watchSubBtnEconomy">📈 Economy</button>
     </div>
 
-    <div id="watchResults"></div>
+    <div id="watchSubList">
+      <div id="watchResults"></div>
+    </div>
+
+    <div id="watchSubEconomy" class="hidden">
+      <div class="panel" id="watchEconomyPanel">
+        <h3 style="margin-top:0;">Your Watchlist Economy</h3>
+        <p class="recipe-meta">Movers among what you're actually watching — not the whole game's market, just yours.</p>
+        <div id="watchEconomy"><p class="recipe-meta" style="margin:0;">Add a few items and recheck prices a couple of times to see movers here.</p></div>
+      </div>
+    </div>
   </div>
 
   <div id="tabGlamour" class="tab-panel hidden">
@@ -651,6 +706,32 @@
   </div>
 
   <p class="footer-note" id="footerNote">the slave fetches; the slave does not explain itself.</p>
+  </div>
+
+  <div id="personalStatsPage" class="hidden">
+    <div class="row" style="align-items:center; margin-bottom:14px;">
+      <button id="personalStatsBackBtn" class="secondary" type="button">← Back</button>
+      <h2 style="margin:0; color:var(--accent);">📜 The Slave's Personal Stats</h2>
+    </div>
+
+    <div class="panel" id="slaveReportPanel">
+      <h3 style="margin-top:0;">Lifetime Tallies</h3>
+      <p class="recipe-meta">Real numbers, tracked across every tab — not just the Watchlist.</p>
+      <div id="slaveReportBody"></div>
+    </div>
+
+    <div class="panel" id="lycaaLaborPanel">
+      <h3 style="margin-top:0;">Lycaa's Labor</h3>
+      <p class="recipe-meta">Every time you hit "Copy basket for Lycaa," she grumbles and gets to work. Purely fictional, tracked anyway.</p>
+      <div id="lycaaLaborBody"></div>
+    </div>
+
+    <div class="panel" id="funStatsPanel">
+      <h3 style="margin-top:0;">Assorted Nonsense</h3>
+      <p class="recipe-meta">100% fictional. Derived from your real numbers above so they at least grow with you.</p>
+      <div id="funStatsBody"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -740,6 +821,36 @@ document.getElementById('tabBtnShopping').addEventListener('click', ()=>showTab(
 document.getElementById('tabBtnProfit').addEventListener('click', ()=>showTab('profit'));
 document.getElementById('tabBtnWatch').addEventListener('click', ()=>showTab('watch'));
 document.getElementById('tabBtnGlamour').addEventListener('click', ()=>showTab('glamour'));
+
+// --- Watchlist's own internal sub-tabs (Watching / Economy) — a smaller
+// version of the same pattern, scoped to just that one tab. ---
+const WATCH_SUBTAB_IDS = ['List', 'Economy'];
+function showWatchSubTab(name){
+  WATCH_SUBTAB_IDS.forEach(t => {
+    document.getElementById('watchSub' + t).classList.toggle('hidden', t !== name);
+    document.getElementById('watchSubBtn' + t).classList.toggle('active', t === name);
+  });
+}
+document.getElementById('watchSubBtnList').addEventListener('click', ()=>showWatchSubTab('List'));
+document.getElementById('watchSubBtnEconomy').addEventListener('click', ()=>showWatchSubTab('Economy'));
+
+// --- Standalone Personal Stats page (covers stats from every tab, not just
+// the Watchlist) — swaps out the main tab content entirely while open. ---
+let personalStatsPreviousTab = null;
+function openPersonalStats(){
+  personalStatsPreviousTab = TAB_IDS.find(t => !document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.contains('hidden')) || 'craft';
+  document.getElementById('mainContent').classList.add('hidden');
+  document.getElementById('personalStatsPage').classList.remove('hidden');
+  renderSlaveReport();
+  renderLycaaLabor();
+  renderFunStats();
+}
+function closePersonalStats(){
+  document.getElementById('personalStatsPage').classList.add('hidden');
+  document.getElementById('mainContent').classList.remove('hidden');
+}
+document.getElementById('personalStatsBtn').addEventListener('click', openPersonalStats);
+document.getElementById('personalStatsBackBtn').addEventListener('click', closePersonalStats);
 
 // Used for JSON APIs (Garland Tools, Universalis) — no "reader" services here since
 // those reformat content and would break JSON.parse.
@@ -2366,6 +2477,14 @@ async function copyBasket(){
   const c = document.getElementById('basketCopyConfirm');
   c.classList.remove('hidden');
   setTimeout(()=>c.classList.add('hidden'), 2500);
+
+  // Fictional, but persistent: every item in the basket costs her another
+  // random 1-5 minutes of "crafting time," piled onto a running lifetime total.
+  const itemCount = list.reduce((s,i)=> s + i.qty, 0);
+  let minutesThisOrder = 0;
+  for (let i = 0; i < itemCount; i++){ minutesThisOrder += Math.floor(Math.random() * 5) + 1; }
+  bumpStat('lycaaCraftMinutes', minutesThisOrder);
+  bumpStat('copyBasketClicks', 1);
 }
 
 // --- Shopping List tab: combines every basket recipe's ingredients into one
@@ -2787,7 +2906,7 @@ function setWatchAlert(id, rawValue){
 // --- Slave's Report: lifetime personal-use counters, purely for fun — a
 // running tally of how much fetching you've put the slave through, not a
 // rigorous audit log. ---
-const STATS_DEFAULTS = { searches: 0, recipesChecked: 0, gilEvaluated: 0, basketItems: 0, watchlistAlerts: 0 };
+const STATS_DEFAULTS = { searches: 0, recipesChecked: 0, gilEvaluated: 0, basketItems: 0, watchlistAlerts: 0, lycaaCraftMinutes: 0, copyBasketClicks: 0 };
 function loadStats(){
   try{ return Object.assign({}, STATS_DEFAULTS, JSON.parse(localStorage.getItem('lycaas_stats') || '{}')); }
   catch(e){ return Object.assign({}, STATS_DEFAULTS); }
@@ -2809,6 +2928,60 @@ function renderSlaveReport(){
       <div class="stat-cell"><div class="stat-num">${fmt(s.gilEvaluated)}g</div><div class="stat-label">Gil evaluated</div></div>
       <div class="stat-cell"><div class="stat-num">${s.basketItems}</div><div class="stat-label">Basket items</div></div>
       <div class="stat-cell"><div class="stat-num">${s.watchlistAlerts}</div><div class="stat-label">Watchlist alerts</div></div>
+    </div>
+  `;
+}
+
+// --- Lycaa's Labor: every "Copy basket for Lycaa" click rolls a random
+// 1-5 minute "crafting time" per basket item and piles it onto a running,
+// persistent total. Entirely fictional, but the total is real and sticky —
+// not re-rolled just by looking at this page. ---
+function minutesToClock(totalMinutes){
+  const mins = Math.round(totalMinutes);
+  const days = Math.floor(mins / 1440);
+  const hours = Math.floor((mins % 1440) / 60);
+  const remMins = mins % 60;
+  const parts = [];
+  if (days) parts.push(days + 'd');
+  if (hours || days) parts.push(hours + 'h');
+  parts.push(remMins + 'm');
+  return parts.join(' ');
+}
+function renderLycaaLabor(){
+  const el = document.getElementById('lycaaLaborBody');
+  if (!el) return;
+  const s = loadStats();
+  const totalMinutes = s.lycaaCraftMinutes || 0;
+  const clicks = s.copyBasketClicks || 0;
+  const avg = clicks > 0 ? (totalMinutes / clicks) : 0;
+  el.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-cell"><div class="stat-num">${minutesToClock(totalMinutes)}</div><div class="stat-label">Total time spent crafting your orders</div></div>
+      <div class="stat-cell"><div class="stat-num">${clicks}</div><div class="stat-label">Times you've sent her the basket</div></div>
+      <div class="stat-cell"><div class="stat-num">${avg ? avg.toFixed(1) + 'm' : '—'}</div><div class="stat-label">Average per order</div></div>
+    </div>
+  `;
+}
+
+// --- Assorted Nonsense: playful, entirely fictional stats derived
+// deterministically from the real counters above, so they grow with actual
+// use instead of being re-randomized every time you open the page. ---
+function renderFunStats(){
+  const el = document.getElementById('funStatsBody');
+  if (!el) return;
+  const s = loadStats();
+  const miles = (s.searches * 0.31 + s.recipesChecked * 0.14).toFixed(1);
+  const quillsWornDown = Math.floor(s.gilEvaluated / 250000);
+  const coffeeBreaks = Math.floor((s.lycaaCraftMinutes || 0) / 25);
+  const cursesAtUniversalis = s.watchlistAlerts * 3 + Math.floor(s.searches / 4);
+  const cartsPushed = Math.floor(s.basketItems / 3);
+  el.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-cell"><div class="stat-num">${miles}</div><div class="stat-label">Miles walked to the Marketboard</div></div>
+      <div class="stat-cell"><div class="stat-num">${quillsWornDown}</div><div class="stat-label">Quills worn down tallying prices</div></div>
+      <div class="stat-cell"><div class="stat-num">${coffeeBreaks}</div><div class="stat-label">Coffee breaks earned (unpaid)</div></div>
+      <div class="stat-cell"><div class="stat-num">${cursesAtUniversalis}</div><div class="stat-label">Curses muttered at Universalis</div></div>
+      <div class="stat-cell"><div class="stat-num">${cartsPushed}</div><div class="stat-label">Handcarts pushed to your door</div></div>
     </div>
   `;
 }
@@ -2868,17 +3041,31 @@ function playAlertBeep(){
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     const ctx = new Ctx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.45);
-    osc.onended = () => { try{ ctx.close(); }catch(e){} };
+    // A proper attention-grabbing alarm: three sharp, alternating-pitch
+    // pips (like an old alarm clock), not one soft chirp. Loud enough to
+    // notice from another room, short enough not to be annoying.
+    const PIP_COUNT = 3;
+    const PIP_DURATION = 0.16;
+    const PIP_GAP = 0.11;
+    const FREQ_HIGH = 1046.5; // C6
+    const FREQ_LOW = 830.6;   // Ab5
+    let t = ctx.currentTime + 0.02;
+    for (let i = 0; i < PIP_COUNT; i++){
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(i % 2 === 0 ? FREQ_HIGH : FREQ_LOW, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.5, t + 0.015);
+      gain.gain.setValueAtTime(0.5, t + PIP_DURATION - 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + PIP_DURATION);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + PIP_DURATION + 0.02);
+      t += PIP_DURATION + PIP_GAP;
+    }
+    setTimeout(() => { try{ ctx.close(); }catch(e){} }, (t - ctx.currentTime + 0.2) * 1000);
   }catch(e){ /* audio isn't available everywhere — the visual banner still shows regardless */ }
 }
 function notifyPriceAlert(item){
@@ -2938,11 +3125,11 @@ function stopAutoRefresh(){
 // "trending down," not a full analytics suite. ---
 const watchHistoryCache = {};
 async function toggleHistoryChart(id, world, containerEl){
-  if (containerEl.dataset.loaded === '1'){
-    containerEl.classList.toggle('hidden');
-    return;
-  }
-  containerEl.classList.remove('hidden');
+  // Visibility is entirely owned by the caller (toggleTickerSection, which
+  // shows/hides the wrapping .ticker-expand-section) — this function only
+  // loads+renders the chart into containerEl once, on first open, and does
+  // nothing on subsequent opens since it's already sitting there rendered.
+  if (containerEl.dataset.loaded === '1') return;
   containerEl.innerHTML = '<p class="recipe-meta" style="margin:0;">Loading recent sale history…</p>';
   try{
     const cacheKey = world + ':' + id;
@@ -2969,18 +3156,56 @@ function buildSparklineSvg(entries){
   const prices = entries.map(e => e.pricePerUnit);
   const min = Math.min.apply(null, prices);
   const max = Math.max.apply(null, prices);
-  const w = 320, h = 70, pad = 6;
   const range = (max - min) || 1;
-  const points = entries.map((e, i) => {
-    const x = pad + (i / Math.max(1, entries.length - 1)) * (w - pad*2);
-    const y = h - pad - ((e.pricePerUnit - min) / range) * (h - pad*2);
-    return x.toFixed(1) + ',' + y.toFixed(1);
-  }).join(' ');
-  const oldest = new Date(entries[0].timestamp * 1000).toLocaleDateString();
-  const newest = new Date(entries[entries.length-1].timestamp * 1000).toLocaleDateString();
-  return '<div class="recipe-meta" style="margin:0 0 4px;">Last ' + entries.length + ' sale(s), ' + oldest + ' → ' + newest + '</div>'
-    + '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="' + h + '" style="max-width:340px; display:block;">'
-    + '<polyline points="' + points + '" fill="none" stroke="var(--accent)" stroke-width="2"/>'
+  const first = prices[0];
+  const last = prices[prices.length - 1];
+  // Same convention as the rest of the app: a price going DOWN is good news
+  // for a buyer, going UP is bad news — the line/marker color follows that.
+  const trendUp = last >= first;
+  const trendColor = trendUp ? 'var(--bad)' : 'var(--good)';
+  const trendPct = first > 0 ? Math.round(((last - first) / first) * 100) : 0;
+
+  const w = 400, h = 150;
+  const mL = 50, mR = 10, mT = 14, mB = 22;
+  const plotW = w - mL - mR;
+  const plotH = h - mT - mB;
+  const n = entries.length;
+  const xAt = i => mL + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
+  const yAt = price => mT + plotH - ((price - min) / range) * plotH;
+
+  const points = entries.map((e, i) => xAt(i).toFixed(1) + ',' + yAt(e.pricePerUnit).toFixed(1)).join(' ');
+  const areaPoints = xAt(0).toFixed(1) + ',' + (mT + plotH).toFixed(1) + ' ' + points + ' ' + xAt(n-1).toFixed(1) + ',' + (mT + plotH).toFixed(1);
+
+  // Three gridlines with real price labels — this is the part that was
+  // missing before: a bare line with no numbers on the chart itself.
+  const gridPrices = [max, (max + min) / 2, min];
+  const gridHtml = gridPrices.map(p => {
+    const y = yAt(p);
+    return '<line x1="' + mL + '" y1="' + y.toFixed(1) + '" x2="' + (w - mR) + '" y2="' + y.toFixed(1) + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="2,3"/>'
+      + '<text x="' + (mL - 6) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end" font-size="10" fill="var(--dim)">' + fmt(Math.round(p)) + 'g</text>';
+  }).join('');
+
+  const lastX = xAt(n-1), lastY = yAt(last);
+  const markerHtml = '<circle cx="' + lastX.toFixed(1) + '" cy="' + lastY.toFixed(1) + '" r="3.5" fill="' + trendColor + '"/>';
+
+  const oldestDate = new Date(entries[0].timestamp * 1000).toLocaleDateString();
+  const newestDate = new Date(entries[entries.length-1].timestamp * 1000).toLocaleDateString();
+  const axisDatesHtml = '<text x="' + mL + '" y="' + (h - 4) + '" font-size="9" fill="var(--dim)">' + oldestDate + '</text>'
+    + '<text x="' + (w - mR) + '" y="' + (h - 4) + '" text-anchor="end" font-size="9" fill="var(--dim)">' + newestDate + '</text>';
+
+  const headline = '<div style="display:flex; align-items:baseline; gap:10px; margin-bottom:6px;">'
+    + '<span style="font-size:1.3rem; font-weight:700; font-variant-numeric:tabular-nums; color:var(--ink);">' + fmt(last) + 'g</span>'
+    + '<span style="font-weight:700; color:' + trendColor + ';">' + (trendUp ? '▲' : '▼') + ' ' + Math.abs(trendPct) + '%</span>'
+    + '<span class="recipe-meta" style="margin:0;">over last ' + n + ' sale(s)</span>'
+    + '</div>';
+
+  return headline
+    + '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="150" style="max-width:400px; display:block;">'
+    + '<polygon points="' + areaPoints + '" fill="' + trendColor + '" fill-opacity="0.12" stroke="none"/>'
+    + gridHtml
+    + '<polyline points="' + points + '" fill="none" stroke="' + trendColor + '" stroke-width="2"/>'
+    + markerHtml
+    + axisDatesHtml
     + '</svg>'
     + '<div class="recipe-meta" style="margin:2px 0 0;">Low ' + fmt(min) + 'g · High ' + fmt(max) + 'g</div>';
 }
@@ -3071,66 +3296,77 @@ function renderWatchlist(){
     container.innerHTML = '<p class="recipe-meta" style="margin:0;">Nothing on the watchlist yet — add an item above.</p>';
     return;
   }
-  container.innerHTML = `
-    <div class="panel">
-      <table>
-        <thead><tr><th>Item</th><th class="num">Price</th><th>World</th><th>Checked</th><th></th></tr></thead>
-        <tbody>
-          ${list.map(w => {
-            const treasureBadge = w.isTreasure
-              ? ('<span class="treasure-tag" title="Comes from opening ' + (w.treasureSrc ? w.treasureSrc.name : 'a coffer') + ' — not something you buy/craft directly.">📦 '
-                + (w.treasureSrc ? ('<a href="' + w.treasureSrc.url + '" target="_blank" rel="noopener" style="color:inherit;">Coffer</a>') : 'Coffer')
-                + '</span>')
-              : '';
-            const crystalBadge = w.isCrystal
-              ? '<span class="treasure-tag" title="An elemental crystal — a common crafting catalyst, not a rare material.">✦ Crystal</span>'
-              : '';
-            const outlierBadge = w.outlier
-              ? '<span class="outlier-tag" title="Only a unit or two listed at this price — the rest of the board is pricier.">⚠ fluke?</span>'
-              : '';
-            const alertBadge = (w.alertBelow != null && w.alertActive)
-              ? '<span class="outlier-tag" title="At or below your alert price.">🔔 alert</span>'
-              : '';
-            const priceCell = w.unit != null
-              ? (fmt(w.unit) + 'g ' + outlierBadge + ' ' + alertBadge)
-              : (w.checkedAt
-                  ? (w.noHomeWorldStock
-                      ? '<span class="nolistings">none on your world</span>'
-                      : '<span class="nolistings">no listings</span>')
-                  : '<span class="nolistings">not checked yet</span>');
-            const checkedCell = w.checkedAt ? new Date(w.checkedAt).toLocaleTimeString() : '—';
 
-            // Price memory: "currently X% below/above your last observed price."
-            let memoryHtml = '';
-            if (w.unit != null && w.prevUnit != null && w.prevUnit > 0 && w.prevCheckedAt !== w.checkedAt){
-              const pct = ((w.unit - w.prevUnit) / w.prevUnit) * 100;
-              const dir = pct < 0 ? 'down' : (pct > 0 ? 'up' : '');
-              const word = pct < 0 ? 'below' : (pct > 0 ? 'above' : 'even with');
-              memoryHtml = '<p class="watch-memory ' + dir + '">Currently ' + Math.abs(Math.round(pct)) + '% ' + word
-                + ' your last observed price (' + fmt(w.prevUnit) + 'g at ' + new Date(w.prevCheckedAt).toLocaleString() + ').</p>';
-            }
+  const rowsHtml = list.map(w => {
+    const treasureBadge = w.isTreasure
+      ? ('<span class="treasure-tag" title="Comes from opening ' + (w.treasureSrc ? w.treasureSrc.name : 'a coffer') + ' — not something you buy/craft directly.">📦 '
+        + (w.treasureSrc ? ('<a href="' + w.treasureSrc.url + '" target="_blank" rel="noopener" style="color:inherit;">Coffer</a>') : 'Coffer')
+        + '</span>')
+      : '';
+    const crystalBadge = w.isCrystal
+      ? '<span class="treasure-tag" title="An elemental crystal — a common crafting catalyst, not a rare material.">✦ Crystal</span>'
+      : '';
+    const outlierBadge = w.outlier
+      ? '<span class="outlier-tag" title="Only a unit or two listed at this price — the rest of the board is pricier.">⚠ fluke?</span>'
+      : '';
+    const alertFiring = !!(w.alertBelow != null && w.alertActive);
+    const alertBadge = alertFiring
+      ? '<span class="outlier-tag" title="At or below your alert price.">🔔 alert</span>'
+      : '';
 
-            return `<tr>
-              <td>
-                <a href="${wikiUrlForName(w.name)}" target="_blank" rel="noopener">${w.name}</a>${treasureBadge}${crystalBadge}
-                ${memoryHtml}
-                <div class="watch-controls">
-                  <input type="number" min="0" step="1" class="watch-alert-input" data-id="${w.id}" placeholder="alert below (g)" value="${w.alertBelow != null ? w.alertBelow : ''}">
-                  <button class="secondary watch-alert-save" data-id="${w.id}">Set</button>
-                  <button class="secondary watch-chart-toggle" data-id="${w.id}">📈 Chart</button>
-                </div>
-                <div class="hidden watch-chart-body" data-chart-body="${w.id}" style="margin-top:8px;"></div>
-              </td>
-              <td class="num">${priceCell}</td>
-              <td class="world-tag">${w.listingWorld || ''}</td>
-              <td class="world-tag">${checkedCell}</td>
-              <td><button class="secondary watch-remove" data-id="${w.id}">✕</button></td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
+    const priceNum = w.unit != null
+      ? (fmt(w.unit) + 'g')
+      : (w.checkedAt
+          ? (w.noHomeWorldStock ? 'none on your world' : 'no listings')
+          : 'not checked');
+    const checkedText = w.checkedAt ? new Date(w.checkedAt).toLocaleTimeString() : '—';
+    const priceMetaText = w.unit != null ? ((w.listingWorld || '') + ' · ' + checkedText) : (w.checkedAt ? checkedText : 'never checked');
+
+    // Price memory drives the ticker-style change badge — the whole point of
+    // this redesign was to make that read like a stock quote at a glance.
+    let changeHtml = '<span class="ticker-change flat">first read</span>';
+    if (w.unit != null && w.prevUnit != null && w.prevUnit > 0 && w.prevCheckedAt !== w.checkedAt){
+      const pct = ((w.unit - w.prevUnit) / w.prevUnit) * 100;
+      const dir = pct < 0 ? 'down' : (pct > 0 ? 'up' : 'flat');
+      const arrow = pct < 0 ? '▼' : (pct > 0 ? '▲' : '—');
+      changeHtml = '<span class="ticker-change ' + dir + '" title="Last observed ' + fmt(w.prevUnit) + 'g at ' + new Date(w.prevCheckedAt).toLocaleString() + '">'
+        + arrow + ' ' + Math.abs(Math.round(pct)) + '%</span>';
+    } else if (w.unit == null){
+      changeHtml = '<span class="ticker-change flat">—</span>';
+    }
+
+    return `<div class="ticker-row${alertFiring ? ' alert-firing' : ''}">
+      <div class="ticker-name">
+        <a href="${wikiUrlForName(w.name)}" target="_blank" rel="noopener">${w.name}</a>
+        <div class="ticker-badges">${treasureBadge}${crystalBadge}${outlierBadge}${alertBadge}</div>
+      </div>
+      <div class="ticker-price">
+        <div class="ticker-price-num">${priceNum}</div>
+        <div class="ticker-price-meta">${priceMetaText}</div>
+      </div>
+      ${changeHtml}
+      <div class="ticker-actions">
+        <button class="ticker-icon-btn watch-chart-toggle" data-id="${w.id}" title="Sale history chart">📈</button>
+        <button class="ticker-icon-btn watch-alert-toggle" data-id="${w.id}" title="Set price alert">🔔</button>
+        <button class="ticker-icon-btn watch-remove" data-id="${w.id}" title="Remove from watchlist">✕</button>
+      </div>
     </div>
-  `;
+    <div class="ticker-expand" data-expand-id="${w.id}">
+      <div class="ticker-expand-section hidden" data-alert-section="${w.id}">
+        <label style="display:block; font-size:.78rem; color:var(--dim); margin-bottom:6px;">Alert below (gil) — dings once when the price first drops to or under this.</label>
+        <div class="watch-controls">
+          <input type="number" min="0" step="1" class="watch-alert-input" data-id="${w.id}" placeholder="e.g. 900" value="${w.alertBelow != null ? w.alertBelow : ''}">
+          <button class="secondary watch-alert-save" data-id="${w.id}">Save alert</button>
+        </div>
+      </div>
+      <div class="ticker-expand-section hidden" data-chart-section="${w.id}">
+        <div data-chart-body="${w.id}"><p class="recipe-meta" style="margin:0;">Loading…</p></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = '<div class="ticker-list">' + rowsHtml + '</div>';
+
   container.querySelectorAll('.watch-remove').forEach(btn=>{
     btn.addEventListener('click', ()=>removeFromWatchlist(btn.dataset.id));
   });
@@ -3140,12 +3376,31 @@ function renderWatchlist(){
       setWatchAlert(btn.dataset.id, input ? input.value : '');
     });
   });
-  container.querySelectorAll('.watch-chart-toggle').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const body = container.querySelector('[data-chart-body="' + btn.dataset.id + '"]');
-      if (body) toggleHistoryChart(btn.dataset.id, FIXED_WORLD, body);
-    });
+  container.querySelectorAll('.watch-alert-toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=> toggleTickerSection(btn.dataset.id, 'alert', btn));
   });
+  container.querySelectorAll('.watch-chart-toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=> toggleTickerSection(btn.dataset.id, 'chart', btn));
+  });
+}
+
+// Opens/closes one of the two collapsible sections (alert or chart) tucked
+// under a ticker row, and lazy-loads the sale-history chart the first time
+// its section is opened. The outer .ticker-expand wrapper only shows when at
+// least one of its two sections is open, so closing both collapses it away.
+function toggleTickerSection(id, kind, btn){
+  const expand = document.querySelector('.ticker-expand[data-expand-id="' + id + '"]');
+  if (!expand) return;
+  const section = expand.querySelector('[data-' + kind + '-section="' + id + '"]');
+  if (!section) return;
+  const nowHidden = section.classList.toggle('hidden');
+  if (btn) btn.classList.toggle('active', !nowHidden);
+  if (!nowHidden && kind === 'chart'){
+    const body = section.querySelector('[data-chart-body]');
+    if (body) toggleHistoryChart(id, FIXED_WORLD, body);
+  }
+  const anyOpen = Array.prototype.some.call(expand.querySelectorAll('.ticker-expand-section'), s => !s.classList.contains('hidden'));
+  expand.classList.toggle('open', anyOpen);
 }
 
 // Watchlist lives in localStorage only — clearing cookies/site data (or
