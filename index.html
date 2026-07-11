@@ -10,16 +10,27 @@
     --bg:#e8dcc0; --paper:#f6efdc; --panel:#faf4e4; --panel2:#f0e6cc;
     --ink:#3a2f22; --dim:#7a6b53; --good:#4a6741; --bad:#8c3a2b;
     --border:#cdbb92; --accent:#8c3a2b; --accent-dim:#6b2c20;
+    --noise-light:.25; --noise-line1:.035; --noise-line2:.02;
   }
+  /* Dark "paper" — same aged-ledger feel, just lit by lamplight instead of
+     daylight: dark leather/walnut tones instead of a flat modern dark mode. */
+  html[data-theme="dark"]{
+    --bg:#1c1712; --paper:#2a231b; --panel:#31281f; --panel2:#281f17;
+    --ink:#e9dcc4; --dim:#a8967a; --good:#7fae72; --bad:#e08268;
+    --border:#4d3f2e; --accent:#e0916f; --accent-dim:#c97a58;
+    --noise-light:.06; --noise-line1:.05; --noise-line2:.03;
+  }
+
   *{box-sizing:border-box;}
   body{
     margin:0; font-family:Georgia,"Iowan Old Style","Palatino Linotype",Palatino,serif;
     color:var(--ink); min-height:100vh; padding:32px 16px;
     background-color:var(--bg);
     background-image:
-      radial-gradient(ellipse at top left, rgba(255,255,255,.25), transparent 60%),
-      repeating-linear-gradient(0deg, rgba(120,100,60,.035) 0px, rgba(120,100,60,.035) 1px, transparent 1px, transparent 3px),
-      repeating-linear-gradient(90deg, rgba(120,100,60,.02) 0px, rgba(120,100,60,.02) 1px, transparent 1px, transparent 3px);
+      radial-gradient(ellipse at top left, rgba(255,255,255,var(--noise-light)), transparent 60%),
+      repeating-linear-gradient(0deg, rgba(120,100,60,var(--noise-line1)) 0px, rgba(120,100,60,var(--noise-line1)) 1px, transparent 1px, transparent 3px),
+      repeating-linear-gradient(90deg, rgba(120,100,60,var(--noise-line2)) 0px, rgba(120,100,60,var(--noise-line2)) 1px, transparent 1px, transparent 3px);
+    transition: background-color .2s ease, color .2s ease;
   }
   .app{max-width:820px; margin:0 auto;}
   h1{
@@ -107,7 +118,13 @@
 
   .brand-row{display:flex; align-items:center; gap:14px; margin-bottom:2px;}
   .brand-row svg{flex-shrink:0;}
+  .brand-text{flex:1;}
   .brand-text h1{margin:0;}
+  #themeToggleBtn{
+    background:var(--panel); border:1px solid var(--border); color:var(--ink);
+    font-weight:400; padding:8px 14px; align-self:flex-start;
+  }
+  #themeToggleBtn:hover{border-color:var(--accent-dim); color:var(--accent);}
 
   .tabs{display:flex; gap:6px; margin-bottom:16px; border-bottom:2px solid var(--border);}
   .tab-btn{
@@ -192,7 +209,39 @@
   }
   .fav-remove:hover{border-color:var(--bad); color:var(--bad);}
   #glamourFavoriteToggleBtn.active-fav{background:var(--accent); color:var(--paper); border-color:var(--accent);}
+
+  .watch-controls{display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:6px;}
+  .watch-alert-input{
+    width:110px; padding:4px 8px; font-size:.78rem; background:var(--paper);
+    border:1px solid var(--border); color:var(--ink); border-radius:2px; font-family:inherit;
+  }
+  .watch-controls button{padding:4px 9px; font-size:.72rem;}
+  .watch-memory{font-size:.76rem; color:var(--dim); font-style:italic; margin:4px 0 0;}
+  .watch-memory.up{color:var(--bad);}
+  .watch-memory.down{color:var(--good);}
+
+  #watchAlertBanner{
+    background:var(--panel2); border:2px solid var(--bad); border-radius:2px;
+    padding:14px 18px; margin-bottom:16px; color:var(--ink);
+  }
+
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:10px; text-align:center;}
+  .stat-cell{background:var(--panel2); border:1px solid var(--border); border-radius:2px; padding:10px 6px;}
+  .stat-num{font-size:1.4rem; font-weight:700; color:var(--accent); font-variant-numeric:tabular-nums;}
+  .stat-label{font-size:.72rem; color:var(--dim); font-style:italic; margin-top:2px;}
+
+  .economy-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px;}
+  .economy-grid h4{color:var(--accent); font-size:.85rem; text-transform:uppercase; letter-spacing:.4px;}
 </style>
+<script>
+  // Applied immediately (before the rest of the page renders) so switching
+  // back to a saved dark-mode preference doesn't flash light-mode first.
+  try{
+    if (localStorage.getItem('lycaas_theme') === 'dark'){
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  }catch(e){}
+</script>
 </head>
 <body>
 <div class="app">
@@ -227,6 +276,7 @@
       <h1>Lycaa's Slave</h1>
       <p class="sub" style="margin:0;">Fetches material prices, so you know what it'll cost to craft.</p>
     </div>
+    <button id="themeToggleBtn" type="button" title="Switch between light and dark paper">🌙 Dark</button>
   </div>
 
   <div id="fileWarning" class="panel warn-banner hidden">
@@ -472,7 +522,8 @@
   <div id="tabWatch" class="tab-panel hidden">
     <div class="panel">
       <p class="recipe-meta" style="margin-top:0;">Keep an eye on specific ingredients without re-running a whole recipe search —
-      type a name or paste a wiki link to add it, then hit "Recheck all prices" whenever you want a fresh read.</p>
+      type a name or paste a wiki link to add it, then hit "Recheck all prices" whenever you want a fresh read.
+      Set a per-item "alert below" price and turn on auto-refresh to have the slave watch it for you.</p>
       <div class="row">
         <div class="field">
           <label for="watchInput">Item name or wiki URL</label>
@@ -483,14 +534,34 @@
         <button id="watchAddBtn">Add to watchlist</button>
         <button id="watchRecheckBtn" class="secondary">Recheck all prices</button>
       </div>
+      <div class="row" style="align-items:center;">
+        <div class="field" style="max-width:160px;">
+          <label for="watchRefreshInterval">Auto-refresh every</label>
+          <select id="watchRefreshInterval">
+            <option value="1">1 min</option>
+            <option value="5">5 min</option>
+            <option value="10" selected>10 min</option>
+            <option value="30">30 min</option>
+          </select>
+        </div>
+        <button id="watchAutoRefreshToggleBtn" class="secondary" style="align-self:flex-end;">Start watching</button>
+        <span id="watchAutoRefreshStatus" class="recipe-meta" style="margin:0; align-self:flex-end; padding-bottom:9px;"></span>
+      </div>
       <div class="row">
         <button id="watchExportBtn" class="secondary">Export watchlist</button>
         <button id="watchImportBtn" class="secondary">Import watchlist</button>
         <input type="file" id="watchImportFile" accept="application/json,.json" class="hidden">
         <span id="watchImportConfirm" class="copy-confirm hidden">Imported.</span>
       </div>
-      <p class="recipe-meta" style="margin-bottom:0;">Your watchlist only lives in this browser — clearing cookies/site data wipes it. Export a backup file now and then, or before switching browsers.</p>
+      <p class="recipe-meta" style="margin-bottom:0;">Your watchlist only lives in this browser — clearing cookies/site data wipes it. Export a backup file now and then, or before switching browsers. Auto-refresh only runs while this tab stays open.</p>
     </div>
+
+    <div id="watchAlertBanner" class="hidden"></div>
+
+    <details class="panel" id="slaveReportPanel">
+      <summary style="cursor:pointer; font-weight:700; color:var(--accent);">📜 The Slave's Report</summary>
+      <div id="slaveReportBody" style="margin-top:12px;"></div>
+    </details>
 
     <div id="watchFriendlyStatus" class="friendly-status hidden">
       <span class="spinner-emoji">🪙</span>
@@ -515,6 +586,13 @@
       <summary>Technical log (for the curious, or for Lycaa)</summary>
       <pre id="watchLog"></pre>
     </details>
+
+    <div class="panel" id="watchEconomyPanel">
+      <h3 style="margin-top:0;">Your Watchlist Economy</h3>
+      <p class="recipe-meta">Movers among what you're actually watching — not the whole game's market, just yours.</p>
+      <div id="watchEconomy"><p class="recipe-meta" style="margin:0;">Add a few items and recheck prices a couple of times to see movers here.</p></div>
+    </div>
+
     <div id="watchResults"></div>
   </div>
 
@@ -624,6 +702,28 @@ document.getElementById('homeWorldOnlyToggle').addEventListener('change', ()=>{
     return;
   }
   saveWorldSettings(world, toggle.checked);
+});
+
+// --- Dark theme: same aged-paper look, just re-tinted for lamplight instead
+// of daylight. The <head> already applied a saved preference before first
+// paint (to avoid a flash of the wrong theme) — this just wires the button. ---
+function applyTheme(theme){
+  if (theme === 'dark'){
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  localStorage.setItem('lycaas_theme', theme);
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = (theme === 'dark') ? '☀️ Light' : '🌙 Dark';
+}
+(function initTheme(){
+  const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  applyTheme(current);
+})();
+document.getElementById('themeToggleBtn').addEventListener('click', ()=>{
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  applyTheme(isDark ? 'light' : 'dark');
 });
 
 // --- Tabs ---
@@ -1732,6 +1832,9 @@ let lastResultsInfo = null;
 function renderResults(itemName, recipe, world, rows){
   const jobName = JOB_NAMES[recipe.job] || ('Job ' + recipe.job);
   const { bodyHtml, total, anyProhibited, anyNoListings } = renderIngredientRows(rows, 'craft', world);
+  bumpStat('searches', 1);
+  bumpStat('recipesChecked', 1);
+  bumpStat('gilEvaluated', total);
 
   document.getElementById('results').innerHTML = `
     <div class="panel">
@@ -1815,6 +1918,7 @@ async function lookupItem(){
     const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json', lookupUI.log);
     itemData.item.__partials = itemData.partials || [];
     renderItemLookup(itemData.item, html);
+    bumpStat('searches', 1);
     lookupUI.log('Done.');
     addRecent('lycaas_recent_lookup', { name: itemData.item.name, url: pageUrl });
     renderRecent('lycaas_recent_lookup', 'recentLookup', item => {
@@ -1922,6 +2026,7 @@ async function lookupGlamour(){
 
     const glamourName = (pageUrl.split('/').filter(Boolean).pop() || 'Glamour').replace(/-/g,' ');
     renderGlamour(resolved, screenshots, { url: pageUrl, name: glamourName });
+    bumpStat('searches', 1);
     glamourUI.log('Done.');
     addRecent('lycaas_recent_glamour', { name: glamourName, url: pageUrl });
     renderRecent('lycaas_recent_glamour', 'recentGlamour', item => {
@@ -2193,6 +2298,7 @@ function addToBasket(item){
   }
   saveBasket(list);
   renderBasket();
+  bumpStat('basketItems', 1);
   document.getElementById('basketPanel').classList.remove('hidden');
 }
 function removeFromBasket(key){
@@ -2370,6 +2476,7 @@ async function buildShoppingList(){
 
 function renderShoppingList(perItem, rows){
   const { bodyHtml, total, anyProhibited, anyNoListings } = renderIngredientRows(rows, 'shop', FIXED_WORLD);
+  bumpStat('gilEvaluated', total);
   const skipped = perItem.filter(p=>p.failed);
   document.getElementById('shoppingResults').innerHTML = `
     <div class="panel">
@@ -2500,6 +2607,9 @@ async function checkProfit(){
     }
 
     renderProfit(name, recipe, gtId, matRows, craftTotal, sellPrice);
+    bumpStat('searches', 1);
+    bumpStat('recipesChecked', 1);
+    bumpStat('gilEvaluated', craftTotal);
     profitUI.log('Done.');
     addRecent('lycaas_recent_profit', { name, url: pageUrl });
     renderRecent('lycaas_recent_profit', 'recentProfit', item => {
@@ -2631,12 +2741,20 @@ async function addToWatchlist(){
         // notable fact about a crystal — they're common catalysts, not loot. The
         // Crystal badge covers it instead.
         isTreasure: !!treasureSrc,
-        unit: null, listingWorld: null, outlier: false, typicalPrice: null, checkedAt: null
+        unit: null, listingWorld: null, outlier: false, typicalPrice: null, checkedAt: null,
+        // Price memory: the last time we had a valid reading before this most
+        // recent one, so the row can say "X% below your last observed price."
+        prevUnit: null, prevCheckedAt: null,
+        // Price alert: a gil threshold the person sets themselves; alertActive
+        // tracks whether we're currently below it, so a ding only fires on the
+        // transition into "below" instead of nagging on every single recheck.
+        alertBelow: null, alertActive: false
       });
       saveWatchlist(list);
     }
     document.getElementById('watchInput').value = '';
     renderWatchlist();
+    bumpStat('searches', 1);
     watchUI.log('Done.');
   }catch(e){
     watchUI.log('Error: ' + e.message, true);
@@ -2652,16 +2770,234 @@ function removeFromWatchlist(id){
   renderWatchlist();
 }
 
-async function recheckWatchlist(){
+function setWatchAlert(id, rawValue){
   const list = loadWatchlist();
-  if (!list.length){ alert('Watchlist is empty — add something first.'); return; }
+  const w = list.find(x => String(x.id) === String(id));
+  if (!w) return;
+  const num = parseFloat(rawValue);
+  const cleared = rawValue === '' || rawValue == null || isNaN(num) || num <= 0;
+  w.alertBelow = cleared ? null : num;
+  // Re-arm on any change so a lowered/raised threshold gets evaluated fresh
+  // on the next recheck instead of assuming the old alert state still applies.
+  w.alertActive = false;
+  saveWatchlist(list);
+  renderWatchlist();
+}
+
+// --- Slave's Report: lifetime personal-use counters, purely for fun — a
+// running tally of how much fetching you've put the slave through, not a
+// rigorous audit log. ---
+const STATS_DEFAULTS = { searches: 0, recipesChecked: 0, gilEvaluated: 0, basketItems: 0, watchlistAlerts: 0 };
+function loadStats(){
+  try{ return Object.assign({}, STATS_DEFAULTS, JSON.parse(localStorage.getItem('lycaas_stats') || '{}')); }
+  catch(e){ return Object.assign({}, STATS_DEFAULTS); }
+}
+function bumpStat(key, by){
+  const stats = loadStats();
+  stats[key] = (stats[key] || 0) + (by || 1);
+  localStorage.setItem('lycaas_stats', JSON.stringify(stats));
+  renderSlaveReport();
+}
+function renderSlaveReport(){
+  const el = document.getElementById('slaveReportBody');
+  if (!el) return;
+  const s = loadStats();
+  el.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-cell"><div class="stat-num">${s.searches}</div><div class="stat-label">Searches</div></div>
+      <div class="stat-cell"><div class="stat-num">${s.recipesChecked}</div><div class="stat-label">Recipes checked</div></div>
+      <div class="stat-cell"><div class="stat-num">${fmt(s.gilEvaluated)}g</div><div class="stat-label">Gil evaluated</div></div>
+      <div class="stat-cell"><div class="stat-num">${s.basketItems}</div><div class="stat-label">Basket items</div></div>
+      <div class="stat-cell"><div class="stat-num">${s.watchlistAlerts}</div><div class="stat-label">Watchlist alerts</div></div>
+    </div>
+  `;
+}
+
+// --- Your Watchlist Economy: movers computed from your own watched items'
+// price-memory deltas — not a scan of the whole game's market (Universalis
+// doesn't offer a "browse everything" feed, and scanning thousands of items
+// isn't feasible), just what you're actually keeping an eye on. ---
+function renderWatchEconomy(list){
+  const el = document.getElementById('watchEconomy');
+  if (!el) return;
+  const withDelta = list.filter(w => w.unit != null && w.prevUnit != null && w.prevUnit > 0 && w.prevCheckedAt !== w.checkedAt);
+  const priced = list.filter(w => w.unit != null);
+  if (!withDelta.length && !priced.length){
+    el.innerHTML = '<p class="recipe-meta" style="margin:0;">Add a few items and recheck prices a couple of times to see movers here.</p>';
+    return;
+  }
+  const withPct = withDelta.map(w => ({ w, pct: ((w.unit - w.prevUnit) / w.prevUnit) * 100 }));
+  const drops = withPct.filter(x=>x.pct < 0).sort((a,b)=>a.pct-b.pct).slice(0,3);
+  const rises = withPct.filter(x=>x.pct > 0).sort((a,b)=>b.pct-a.pct).slice(0,3);
+  const cheapest = priced.length ? priced.reduce((a,b)=> (b.unit < a.unit ? b : a)) : null;
+  const priciest = priced.length ? priced.reduce((a,b)=> (b.unit > a.unit ? b : a)) : null;
+
+  function moverRow(x, isDrop){
+    const arrow = isDrop ? '▼' : '▲';
+    const color = isDrop ? 'var(--good)' : 'var(--bad)';
+    return '<p style="margin:0 0 4px;"><span style="color:' + color + '; font-weight:700;">' + arrow + ' ' + Math.abs(Math.round(x.pct)) + '%</span> ' + x.w.name + ' (' + fmt(x.w.unit) + 'g)</p>';
+  }
+
+  el.innerHTML = `
+    <div class="economy-grid">
+      <div>
+        <h4>Biggest drops</h4>
+        ${drops.length ? drops.map(x=>moverRow(x,true)).join('') : '<p class="recipe-meta" style="margin:0;">No drops since last check.</p>'}
+      </div>
+      <div>
+        <h4>Biggest increases</h4>
+        ${rises.length ? rises.map(x=>moverRow(x,false)).join('') : '<p class="recipe-meta" style="margin:0;">No increases since last check.</p>'}
+      </div>
+      <div>
+        <h4>Cheapest right now</h4>
+        ${cheapest ? ('<p style="margin:0;">' + cheapest.name + ' — ' + fmt(cheapest.unit) + 'g</p>') : '<p class="recipe-meta" style="margin:0;">—</p>'}
+      </div>
+      <div>
+        <h4>Priciest right now</h4>
+        ${priciest ? ('<p style="margin:0;">' + priciest.name + ' — ' + fmt(priciest.unit) + 'g</p>') : '<p class="recipe-meta" style="margin:0;">—</p>'}
+      </div>
+    </div>
+  `;
+}
+
+// --- Price alerts: a beep (generated in-browser, no sound file needed), a
+// browser notification (if permission was granted), and a visual banner —
+// all three fire together on the transition into "below threshold." ---
+function playAlertBeep(){
+  try{
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.45);
+    osc.onended = () => { try{ ctx.close(); }catch(e){} };
+  }catch(e){ /* audio isn't available everywhere — the visual banner still shows regardless */ }
+}
+function notifyPriceAlert(item){
+  try{
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    new Notification('Lycaa\'s Slave — price alert', {
+      body: item.name + ' just dropped to ' + fmt(item.unit) + 'g (your alert was set at ' + fmt(item.alertBelow) + 'g).'
+    });
+  }catch(e){ /* notifications aren't available everywhere */ }
+}
+function showWatchAlertBanner(triggered){
+  const el = document.getElementById('watchAlertBanner');
+  if (!el) return;
+  if (!triggered.length){ el.classList.add('hidden'); el.innerHTML = ''; return; }
+  el.classList.remove('hidden');
+  el.innerHTML = '<p style="margin:0 0 8px; font-weight:700; color:var(--bad);">🔔 Price alert!</p>'
+    + triggered.map(w => ('<p style="margin:0 0 4px;">' + w.name + ' — your alert was set below ' + fmt(w.alertBelow) + 'g, now ' + fmt(w.unit) + 'g.</p>')).join('')
+    + '<button class="secondary" id="watchAlertDismissBtn" style="margin-top:6px;">Dismiss</button>';
+  const dismissBtn = document.getElementById('watchAlertDismissBtn');
+  if (dismissBtn) dismissBtn.addEventListener('click', ()=> el.classList.add('hidden'));
+}
+
+// --- Auto-updater: reruns recheckWatchlist() on a timer so prices (and
+// alerts) update themselves while this tab stays open. Stops the moment the
+// tab/browser closes — there's no service worker keeping this alive in the
+// background, which the UI is upfront about. ---
+let watchAutoRefreshTimer = null;
+function loadWatchRefreshInterval(){
+  const v = parseInt(localStorage.getItem('lycaas_watch_refresh_interval') || '10', 10);
+  return [1,5,10,30].includes(v) ? v : 10;
+}
+function saveWatchRefreshInterval(mins){ localStorage.setItem('lycaas_watch_refresh_interval', String(mins)); }
+function setAutoRefreshRunning(running){
+  const btn = document.getElementById('watchAutoRefreshToggleBtn');
+  const statusEl = document.getElementById('watchAutoRefreshStatus');
+  if (btn) btn.textContent = running ? 'Stop watching' : 'Start watching';
+  if (statusEl) statusEl.textContent = running ? ('Auto-refreshing every ' + loadWatchRefreshInterval() + ' min...') : '';
+}
+async function startAutoRefresh(){
+  if (watchAutoRefreshTimer) return;
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default'){
+    try{ await Notification.requestPermission(); }catch(e){}
+  }
+  const mins = loadWatchRefreshInterval();
+  setAutoRefreshRunning(true);
+  watchAutoRefreshTimer = setInterval(()=>{ recheckWatchlist(true); }, mins * 60 * 1000);
+}
+function stopAutoRefresh(){
+  if (watchAutoRefreshTimer){ clearInterval(watchAutoRefreshTimer); watchAutoRefreshTimer = null; }
+  setAutoRefreshRunning(false);
+}
+
+// --- Historical price sparkline: Universalis exposes real recent sale
+// history (actual completed transactions, not just current listings), so
+// this fetches a handful of the most recent sales and plots them
+// left-to-right as a plain inline SVG line — enough to say "trending up" or
+// "trending down," not a full analytics suite. ---
+const watchHistoryCache = {};
+async function toggleHistoryChart(id, world, containerEl){
+  if (containerEl.dataset.loaded === '1'){
+    containerEl.classList.toggle('hidden');
+    return;
+  }
+  containerEl.classList.remove('hidden');
+  containerEl.innerHTML = '<p class="recipe-meta" style="margin:0;">Loading recent sale history…</p>';
+  try{
+    const cacheKey = world + ':' + id;
+    let entries = watchHistoryCache[cacheKey];
+    if (!entries){
+      const data = await fetchJson('https://universalis.app/api/v2/history/' + world + '/' + id + '?entriesToReturn=20', watchUI.log);
+      entries = (data && data.entries) || [];
+      watchHistoryCache[cacheKey] = entries;
+    }
+    if (!entries.length){
+      containerEl.innerHTML = '<p class="recipe-meta" style="margin:0;">No recent sale history available for this item.</p>';
+      containerEl.dataset.loaded = '1';
+      return;
+    }
+    // Universalis returns newest-first — flip to chronological for a left-to-right chart.
+    const chrono = entries.slice().reverse();
+    containerEl.innerHTML = buildSparklineSvg(chrono);
+    containerEl.dataset.loaded = '1';
+  }catch(e){
+    containerEl.innerHTML = '<p class="recipe-meta prohibited" style="margin:0;">Couldn\'t load sale history (' + e.message + ').</p>';
+  }
+}
+function buildSparklineSvg(entries){
+  const prices = entries.map(e => e.pricePerUnit);
+  const min = Math.min.apply(null, prices);
+  const max = Math.max.apply(null, prices);
+  const w = 320, h = 70, pad = 6;
+  const range = (max - min) || 1;
+  const points = entries.map((e, i) => {
+    const x = pad + (i / Math.max(1, entries.length - 1)) * (w - pad*2);
+    const y = h - pad - ((e.pricePerUnit - min) / range) * (h - pad*2);
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+  const oldest = new Date(entries[0].timestamp * 1000).toLocaleDateString();
+  const newest = new Date(entries[entries.length-1].timestamp * 1000).toLocaleDateString();
+  return '<div class="recipe-meta" style="margin:0 0 4px;">Last ' + entries.length + ' sale(s), ' + oldest + ' → ' + newest + '</div>'
+    + '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="' + h + '" style="max-width:340px; display:block;">'
+    + '<polyline points="' + points + '" fill="none" stroke="var(--accent)" stroke-width="2"/>'
+    + '</svg>'
+    + '<div class="recipe-meta" style="margin:2px 0 0;">Low ' + fmt(min) + 'g · High ' + fmt(max) + 'g</div>';
+}
+
+async function recheckWatchlist(isAuto){
+  const list = loadWatchlist();
+  if (!list.length){
+    if (!isAuto) alert('Watchlist is empty — add something first.');
+    return;
+  }
   watchUI.hideError();
-  watchUI.clearLog();
+  if (!isAuto) watchUI.clearLog();
   const btn = document.getElementById('watchRecheckBtn');
-  btn.disabled = true;
+  if (!isAuto) btn.disabled = true;
   try{
     watchUI.setStage('prices');
-    watchUI.log('Fetching live prices for ' + list.length + ' watched item(s)...');
+    watchUI.log((isAuto ? '[auto] ' : '') + 'Fetching live prices for ' + list.length + ' watched item(s)...');
     const ids = list.map(w=>w.id);
     let priceResult;
     try{
@@ -2671,36 +3007,66 @@ async function recheckWatchlist(){
     }
     const worldFilter = getActiveWorldFilter();
     const now = Date.now();
+    const newlyTriggered = [];
     list.forEach(w => {
+      // Price memory: if we already had a valid reading, stash it as the
+      // "last observed" baseline before this recheck overwrites it — this is
+      // what lets a row say "X% below your last observed price" afterward.
+      const hadPrevious = w.unit != null;
+      const priorUnit = w.unit;
+      const priorCheckedAt = w.checkedAt;
+
       if (priceResult.unresolved.includes(w.id) || priceResult.unresolved.includes(String(w.id)) || !priceResult.items[w.id]){
         w.unit = null; w.listingWorld = null; w.outlier = false; w.typicalPrice = null; w.checkedAt = now; w.noHomeWorldStock = false;
-        return;
+      } else {
+        const priced = priceForQuantity(priceResult.items[w.id], 1, worldFilter, w.isCrystal);
+        if (!priced){
+          const hasAnyListings = !!(priceResult.items[w.id].listings && priceResult.items[w.id].listings.length);
+          w.unit = null; w.listingWorld = null; w.outlier = false; w.typicalPrice = null; w.checkedAt = now;
+          w.noHomeWorldStock = !!(worldFilter && hasAnyListings);
+        } else {
+          w.unit = priced.unit; w.listingWorld = priced.worldName; w.outlier = priced.outlier;
+          w.typicalPrice = priced.typicalPrice; w.checkedAt = now; w.noHomeWorldStock = false;
+        }
       }
-      const priced = priceForQuantity(priceResult.items[w.id], 1, worldFilter, w.isCrystal);
-      if (!priced){
-        const hasAnyListings = !!(priceResult.items[w.id].listings && priceResult.items[w.id].listings.length);
-        w.unit = null; w.listingWorld = null; w.outlier = false; w.typicalPrice = null; w.checkedAt = now;
-        w.noHomeWorldStock = !!(worldFilter && hasAnyListings);
-        return;
+
+      if (hadPrevious){ w.prevUnit = priorUnit; w.prevCheckedAt = priorCheckedAt; }
+
+      // Price alert: only "ding" on the transition from above-threshold (or
+      // never-checked) into below-threshold, not on every recheck while it
+      // stays low — otherwise auto-refresh would nag every single tick.
+      if (w.alertBelow != null && w.unit != null){
+        if (w.unit <= w.alertBelow){
+          if (!w.alertActive){ newlyTriggered.push(w); }
+          w.alertActive = true;
+        } else {
+          w.alertActive = false;
+        }
       }
-      w.unit = priced.unit; w.listingWorld = priced.worldName; w.outlier = priced.outlier;
-      w.typicalPrice = priced.typicalPrice; w.checkedAt = now; w.noHomeWorldStock = false;
     });
     saveWatchlist(list);
     renderWatchlist();
+    if (newlyTriggered.length){
+      bumpStat('watchlistAlerts', newlyTriggered.length);
+      showWatchAlertBanner(newlyTriggered);
+      playAlertBeep();
+      newlyTriggered.forEach(notifyPriceAlert);
+    }
     watchUI.log('Done.');
   }catch(e){
     watchUI.log('Error: ' + e.message, true);
     watchUI.showError(e);
   }finally{
     watchUI.stopStatus();
-    btn.disabled = false;
+    if (!isAuto) btn.disabled = false;
   }
 }
 
 function renderWatchlist(){
   const list = loadWatchlist();
   const container = document.getElementById('watchResults');
+  renderSlaveReport();
+  renderWatchEconomy(list);
   if (!list.length){
     container.innerHTML = '<p class="recipe-meta" style="margin:0;">Nothing on the watchlist yet — add an item above.</p>';
     return;
@@ -2722,16 +3088,39 @@ function renderWatchlist(){
             const outlierBadge = w.outlier
               ? '<span class="outlier-tag" title="Only a unit or two listed at this price — the rest of the board is pricier.">⚠ fluke?</span>'
               : '';
+            const alertBadge = (w.alertBelow != null && w.alertActive)
+              ? '<span class="outlier-tag" title="At or below your alert price.">🔔 alert</span>'
+              : '';
             const priceCell = w.unit != null
-              ? (fmt(w.unit) + 'g ' + outlierBadge)
+              ? (fmt(w.unit) + 'g ' + outlierBadge + ' ' + alertBadge)
               : (w.checkedAt
                   ? (w.noHomeWorldStock
                       ? '<span class="nolistings">none on your world</span>'
                       : '<span class="nolistings">no listings</span>')
                   : '<span class="nolistings">not checked yet</span>');
             const checkedCell = w.checkedAt ? new Date(w.checkedAt).toLocaleTimeString() : '—';
+
+            // Price memory: "currently X% below/above your last observed price."
+            let memoryHtml = '';
+            if (w.unit != null && w.prevUnit != null && w.prevUnit > 0 && w.prevCheckedAt !== w.checkedAt){
+              const pct = ((w.unit - w.prevUnit) / w.prevUnit) * 100;
+              const dir = pct < 0 ? 'down' : (pct > 0 ? 'up' : '');
+              const word = pct < 0 ? 'below' : (pct > 0 ? 'above' : 'even with');
+              memoryHtml = '<p class="watch-memory ' + dir + '">Currently ' + Math.abs(Math.round(pct)) + '% ' + word
+                + ' your last observed price (' + fmt(w.prevUnit) + 'g at ' + new Date(w.prevCheckedAt).toLocaleString() + ').</p>';
+            }
+
             return `<tr>
-              <td><a href="${wikiUrlForName(w.name)}" target="_blank" rel="noopener">${w.name}</a>${treasureBadge}${crystalBadge}</td>
+              <td>
+                <a href="${wikiUrlForName(w.name)}" target="_blank" rel="noopener">${w.name}</a>${treasureBadge}${crystalBadge}
+                ${memoryHtml}
+                <div class="watch-controls">
+                  <input type="number" min="0" step="1" class="watch-alert-input" data-id="${w.id}" placeholder="alert below (g)" value="${w.alertBelow != null ? w.alertBelow : ''}">
+                  <button class="secondary watch-alert-save" data-id="${w.id}">Set</button>
+                  <button class="secondary watch-chart-toggle" data-id="${w.id}">📈 Chart</button>
+                </div>
+                <div class="hidden watch-chart-body" data-chart-body="${w.id}" style="margin-top:8px;"></div>
+              </td>
               <td class="num">${priceCell}</td>
               <td class="world-tag">${w.listingWorld || ''}</td>
               <td class="world-tag">${checkedCell}</td>
@@ -2744,6 +3133,18 @@ function renderWatchlist(){
   `;
   container.querySelectorAll('.watch-remove').forEach(btn=>{
     btn.addEventListener('click', ()=>removeFromWatchlist(btn.dataset.id));
+  });
+  container.querySelectorAll('.watch-alert-save').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const input = container.querySelector('.watch-alert-input[data-id="' + btn.dataset.id + '"]');
+      setWatchAlert(btn.dataset.id, input ? input.value : '');
+    });
+  });
+  container.querySelectorAll('.watch-chart-toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const body = container.querySelector('[data-chart-body="' + btn.dataset.id + '"]');
+      if (body) toggleHistoryChart(btn.dataset.id, FIXED_WORLD, body);
+    });
   });
 }
 
@@ -2793,7 +3194,11 @@ function importWatchlistFile(file){
           unit: w.unit != null ? w.unit : null,
           listingWorld: w.listingWorld || null,
           outlier: !!w.outlier, typicalPrice: w.typicalPrice != null ? w.typicalPrice : null,
-          checkedAt: w.checkedAt || null, noHomeWorldStock: !!w.noHomeWorldStock
+          checkedAt: w.checkedAt || null, noHomeWorldStock: !!w.noHomeWorldStock,
+          prevUnit: w.prevUnit != null ? w.prevUnit : null,
+          prevCheckedAt: w.prevCheckedAt || null,
+          alertBelow: w.alertBelow != null ? w.alertBelow : null,
+          alertActive: !!w.alertActive
         });
         currentIds.add(String(w.id));
         added++;
@@ -2862,7 +3267,7 @@ renderRecent('lycaas_recent_profit', 'recentProfit', item => {
 
 document.getElementById('watchAddBtn').addEventListener('click', addToWatchlist);
 document.getElementById('watchInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addToWatchlist(); });
-document.getElementById('watchRecheckBtn').addEventListener('click', recheckWatchlist);
+document.getElementById('watchRecheckBtn').addEventListener('click', ()=>recheckWatchlist(false));
 document.getElementById('watchExportBtn').addEventListener('click', exportWatchlist);
 document.getElementById('watchImportBtn').addEventListener('click', ()=>document.getElementById('watchImportFile').click());
 document.getElementById('watchImportFile').addEventListener('change', (e)=>{
@@ -2870,7 +3275,17 @@ document.getElementById('watchImportFile').addEventListener('change', (e)=>{
   if (file) importWatchlistFile(file);
   e.target.value = '';
 });
+document.getElementById('watchRefreshInterval').value = String(loadWatchRefreshInterval());
+document.getElementById('watchRefreshInterval').addEventListener('change', (e)=>{
+  const mins = parseInt(e.target.value, 10);
+  saveWatchRefreshInterval(mins);
+  if (watchAutoRefreshTimer){ stopAutoRefresh(); startAutoRefresh(); } // restart on the new cadence
+});
+document.getElementById('watchAutoRefreshToggleBtn').addEventListener('click', ()=>{
+  if (watchAutoRefreshTimer) stopAutoRefresh(); else startAutoRefresh();
+});
 renderWatchlist();
+renderSlaveReport();
 
 document.getElementById('glamourBtn').addEventListener('click', lookupGlamour);
 document.getElementById('glamourInput').addEventListener('keydown', e=>{ if(e.key==='Enter') lookupGlamour(); });
