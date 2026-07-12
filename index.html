@@ -120,22 +120,72 @@
   .brand-row svg{flex-shrink:0;}
   .brand-text{flex:1;}
   .brand-text h1{margin:0;}
-  #themeToggleBtn, #personalStatsBtn{
+  #themeToggleBtn, #infoBtn{
     background:var(--panel); border:1px solid var(--border); color:var(--ink);
     font-weight:400; padding:8px 14px; align-self:flex-start;
   }
-  #themeToggleBtn:hover, #personalStatsBtn:hover{border-color:var(--accent-dim); color:var(--accent);}
+  #themeToggleBtn:hover, #infoBtn:hover{border-color:var(--accent-dim); color:var(--accent);}
 
-  .tabs{display:flex; gap:6px; margin-bottom:16px; border-bottom:2px solid var(--border);}
-  .tab-btn{
-    background:transparent; border:1px solid transparent; border-bottom:none; color:var(--dim);
-    font-weight:700; padding:8px 16px; border-radius:2px 2px 0 0; box-shadow:none;
+  /* --- Floating windows: every page is its own draggable, closable window,
+     opened/closed from the launcher sidebar. Several can be open at once. --- */
+  .window-launcher{
+    position:fixed; left:16px; top:50%; transform:translateY(-50%); z-index:9000;
+    display:flex; flex-direction:column; gap:3px;
+    background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:8px; box-shadow:0 6px 18px rgba(0,0,0,.22); max-height:80vh; overflow-y:auto;
   }
-  .tab-btn.active{
-    background:var(--panel); color:var(--accent); border-color:var(--border);
-    position:relative; top:2px;
+  .launcher-btn{
+    display:flex; align-items:center; gap:8px; background:transparent; border:1px solid transparent;
+    color:var(--ink); font-weight:400; padding:8px 12px; border-radius:4px; text-align:left; white-space:nowrap;
   }
-  .tab-panel.hidden{display:none;}
+  .launcher-btn:hover{border-color:var(--border); background:var(--panel2);}
+  .launcher-btn.open{color:var(--accent); font-weight:700; background:var(--panel2); border-color:var(--border);}
+  .launcher-reset-btn{border-top:1px dashed var(--border); margin-top:4px; padding-top:10px; color:var(--dim); font-size:.85rem;}
+
+  .tab-panel{
+    position:fixed; top:100px; left:220px; width:480px; max-width:calc(100vw - 32px); max-height:min(640px, 82vh);
+    background:var(--paper); border:1px solid var(--border); border-radius:6px;
+    box-shadow:0 10px 28px rgba(0,0,0,.28); overflow-y:auto; z-index:100; padding:14px;
+  }
+  .window-titlebar{
+    position:sticky; top:-14px; margin:-14px -14px 12px; z-index:2;
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:10px 14px; background:var(--panel2); border-bottom:1px solid var(--border);
+    cursor:move; touch-action:none; user-select:none;
+  }
+  .window-title{font-weight:700; color:var(--accent);}
+  .window-close-btn{
+    background:transparent; border:none; color:var(--dim); font-size:1.15rem; line-height:1;
+    padding:2px 8px; cursor:pointer; border-radius:3px;
+  }
+  .window-close-btn:hover{color:var(--bad); background:var(--panel);}
+
+  @media (max-width:900px){
+    .window-launcher{
+      position:static; flex-direction:row; flex-wrap:wrap; width:auto;
+      margin-bottom:16px; max-height:none; transform:none;
+    }
+    .tab-panel{
+      position:static !important; width:100% !important; max-width:100% !important;
+      max-height:none !important; margin-bottom:16px; box-shadow:none;
+    }
+    .window-titlebar{cursor:default;}
+  }
+
+  /* --- Information modal: a plain centered pop-up (not a draggable window)
+     explaining what every page does. --- */
+  .info-modal-backdrop{
+    position:fixed; inset:0; background:rgba(20,15,8,.5); z-index:9500;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .info-modal-backdrop.hidden{display:none;}
+  .info-modal{
+    background:var(--paper); border:1px solid var(--border); border-radius:8px;
+    width:600px; max-width:100%; max-height:85vh; overflow-y:auto;
+    box-shadow:0 16px 40px rgba(0,0,0,.4); padding:14px;
+  }
+  .info-feature-card{margin-bottom:10px;}
+  .info-feature-card:last-of-type{margin-bottom:14px;}
 
   .ing-name-btn{
     background:none; border:none; padding:0; color:var(--ink); font-family:inherit; font-size:inherit;
@@ -356,8 +406,73 @@
       <h1>Lycaa's Slave</h1>
       <p class="sub" style="margin:0;">Fetches material prices, so you know what it'll cost to craft.</p>
     </div>
-    <button id="personalStatsBtn" type="button" title="Your lifetime stats across every tab" class="secondary">📜 Personal Stats</button>
+    <button id="infoBtn" type="button" class="secondary" title="What can this thing do?">ℹ️ Information</button>
     <button id="themeToggleBtn" type="button" title="Switch between light and dark paper">🌙 Dark</button>
+  </div>
+
+  <div class="window-launcher" id="windowLauncher">
+    <button class="launcher-btn" type="button" data-win="craft">📦 <span>Craft Cost</span></button>
+    <button class="launcher-btn" type="button" data-win="glamour">👗 <span>Glamour</span></button>
+    <button class="launcher-btn" type="button" data-win="lookup">🔍 <span>Item Lookup</span></button>
+    <button class="launcher-btn" type="button" data-win="shopping">🛒 <span>Shopping List</span></button>
+    <button class="launcher-btn" type="button" data-win="profit">💰 <span>Profit Calc</span></button>
+    <button class="launcher-btn" type="button" data-win="watch">📊 <span>Watchlist</span></button>
+    <button class="launcher-btn" type="button" data-win="unlockables">🐴 <span>Unlockables</span></button>
+    <button class="launcher-btn" type="button" data-win="personalStats">📜 <span>Personal Stats</span></button>
+    <button class="launcher-btn launcher-reset-btn" type="button" id="windowResetBtn" title="Close everything and reset window positions">⊞ <span>Reset layout</span></button>
+  </div>
+
+  <div id="infoModalBackdrop" class="info-modal-backdrop hidden">
+    <div class="info-modal" id="infoModal">
+      <div class="window-titlebar" style="cursor:default;">
+        <span class="window-title">ℹ️ What can this thing do?</span>
+        <button class="window-close-btn" type="button" id="infoModalCloseBtn" title="Close">✕</button>
+      </div>
+      <p style="margin-top:0;">One tool, no account, no backend — everything runs live in your browser, pinned to the <b>Light</b> data center. Pick anything below to open it; each opens as its own little window that you can drag around, and you can have as many open at once as you like.</p>
+
+      <div class="panel info-feature-card">
+        <h3 style="margin:0 0 4px;">📦 Craft Cost</h3>
+        <p style="margin:0 0 8px;">Paste a wiki link or just type an item's name — the slave finds the recipe and prices every ingredient live, working out the cheapest way to actually buy each one (whole lots and all).</p>
+        <button class="secondary info-open-btn" data-open-win="craft">Open →</button>
+      </div>
+      <div class="panel info-feature-card">
+        <h3 style="margin:0 0 4px;">👗 Glamour</h3>
+        <p style="margin:0 0 8px;">Paste an Eorzea Collection glamour link and get every piece named, priced, and explained — screenshots, exactly how to unlock each item, and a favorites list you can export.</p>
+        <button class="secondary info-open-btn" data-open-win="glamour">Open →</button>
+      </div>
+      <div class="panel info-feature-card">
+        <h3 style="margin:0 0 4px;">🔍 Item Lookup</h3>
+        <p style="margin:0 0 8px;">Look up any item to see exactly how it's obtained — crafted, gathered, dropped, bought — plus its current market price, even for things that aren't craftable.</p>
+        <button class="secondary info-open-btn" data-open-win="lookup">Open →</button>
+      </div>
+      <div class="panel info-feature-card">
+        <h3 style="margin:0 0 4px;">🛒 Shopping List</h3>
+        <p style="margin:0 0 8px;">Add several things to your basket and get one consolidated buy list, with duplicate ingredients across recipes summed instead of listed three times over.</p>
+        <button class="secondary info-open-btn" data-open-win="shopping">Open →</button>
+      </div>
+      <div class="panel info-feature-card">
+        <h3 style="margin:0 0 4px;">💰 Profit Calc</h3>
+        <p style="margin:0 0 8px;">Compares what an item costs to craft against what it actually sells for, so you know whether it's worth making before you buy a single material.</p>
+        <button class="secondary info-open-btn" data-open-win="profit">Open →</button>
+      </div>
+      <div class="panel info-feature-card">
+        <h3 style="margin:0 0 4px;">📊 Watchlist</h3>
+        <p style="margin:0 0 8px;">Track specific ingredient prices over time, set low-price alerts (banner, sound, and browser notification), auto-refresh on a timer, and see your own little price-history charts.</p>
+        <button class="secondary info-open-btn" data-open-win="watch">Open →</button>
+      </div>
+      <div class="panel info-feature-card">
+        <h3 style="margin:0 0 4px;">🐴 Unlockables</h3>
+        <p style="margin:0 0 8px;">Search mounts, minions, emotes, and fashion accessories — see what they look like, how rare they are, and exactly how to get them.</p>
+        <button class="secondary info-open-btn" data-open-win="unlockables">Open →</button>
+      </div>
+      <div class="panel info-feature-card">
+        <h3 style="margin:0 0 4px;">📜 Personal Stats</h3>
+        <p style="margin:0 0 8px;">A tally of everything you've actually done here, plus a healthy amount of nonsense the slave made up about how far she's walked to the market board.</p>
+        <button class="secondary info-open-btn" data-open-win="personalStats">Open →</button>
+      </div>
+
+      <p class="recipe-meta" style="margin-bottom:0;">Also worth knowing: your home world and the basket bar sit pinned at the top no matter which windows you have open, and there's a dark mode toggle next to this Information button.</p>
+    </div>
   </div>
 
   <div id="mainContent">
@@ -406,17 +521,11 @@
     </div>
   </div>
 
-  <div class="tabs">
-    <button class="tab-btn active" id="tabBtnCraft">Craft Cost</button>
-    <button class="tab-btn" id="tabBtnGlamour">Glamour</button>
-    <button class="tab-btn" id="tabBtnLookup">Item Lookup</button>
-    <button class="tab-btn" id="tabBtnShopping">Shopping List</button>
-    <button class="tab-btn" id="tabBtnProfit">Profit Calc</button>
-    <button class="tab-btn" id="tabBtnWatch">Watchlist</button>
-    <button class="tab-btn" id="tabBtnUnlockables">Unlockables</button>
-  </div>
-
   <div id="tabCraft" class="tab-panel">
+    <div class="window-titlebar" data-win="craft">
+      <span class="window-title">📦 Craft Cost</span>
+      <button class="window-close-btn" type="button" data-win="craft" title="Close">✕</button>
+    </div>
     <details class="panel" id="tutorial" open>
       <summary>How this works (tap to collapse)</summary>
       <ol>
@@ -486,6 +595,10 @@
   </div>
 
   <div id="tabLookup" class="tab-panel hidden">
+    <div class="window-titlebar" data-win="lookup">
+      <span class="window-title">🔍 Item Lookup</span>
+      <button class="window-close-btn" type="button" data-win="lookup" title="Close">✕</button>
+    </div>
     <div class="panel">
       <p class="recipe-meta" style="margin-top:0;">Type an item's name (e.g. <i>Chondrite Ingot</i>), or paste its wiki link directly, and the slave will report how it's actually obtained.</p>
       <div class="row">
@@ -527,6 +640,10 @@
   </div>
 
   <div id="tabShopping" class="tab-panel hidden">
+    <div class="window-titlebar" data-win="shopping">
+      <span class="window-title">🛒 Shopping List</span>
+      <button class="window-close-btn" type="button" data-win="shopping" title="Close">✕</button>
+    </div>
     <div class="panel">
       <p class="recipe-meta" style="margin-top:0;">Combines everything sitting in your Basket into one consolidated shopping list —
       if three different basket items all need Chondrite Ingot, this adds it up into one line instead of making you
@@ -561,6 +678,10 @@
   </div>
 
   <div id="tabProfit" class="tab-panel hidden">
+    <div class="window-titlebar" data-win="profit">
+      <span class="window-title">💰 Profit Calc</span>
+      <button class="window-close-btn" type="button" data-win="profit" title="Close">✕</button>
+    </div>
     <div class="panel">
       <p class="recipe-meta" style="margin-top:0;">Type an item's name, or paste its wiki link, and the slave compares what the
       materials cost against what the finished item currently sells for — so you know if crafting it to flip is worth the trouble.</p>
@@ -603,6 +724,10 @@
   </div>
 
   <div id="tabWatch" class="tab-panel hidden">
+    <div class="window-titlebar" data-win="watch">
+      <span class="window-title">📊 Watchlist</span>
+      <button class="window-close-btn" type="button" data-win="watch" title="Close">✕</button>
+    </div>
     <div class="panel">
       <p class="recipe-meta" style="margin-top:0;">Keep an eye on specific ingredients without re-running a whole recipe search —
       type a name or paste a wiki link to add it, then hit "Recheck all prices" whenever you want a fresh read.
@@ -684,6 +809,10 @@
   </div>
 
   <div id="tabGlamour" class="tab-panel hidden">
+    <div class="window-titlebar" data-win="glamour">
+      <span class="window-title">👗 Glamour</span>
+      <button class="window-close-btn" type="button" data-win="glamour" title="Close">✕</button>
+    </div>
     <div class="panel">
       <p class="recipe-meta" style="margin-top:0;">Paste a glamour page link from
       <a href="https://ffxiv.eorzeacollection.com" target="_blank" rel="noopener">Eorzea Collection</a>
@@ -738,6 +867,10 @@
   </div>
 
   <div id="tabUnlockables" class="tab-panel hidden">
+    <div class="window-titlebar" data-win="unlockables">
+      <span class="window-title">🐴 Unlockables</span>
+      <button class="window-close-btn" type="button" data-win="unlockables" title="Close">✕</button>
+    </div>
     <div class="panel">
       <p class="recipe-meta" style="margin-top:0;">Look up mounts, minions, emotes, and fashion accessories — see what they look like and how to get them. Data via <a href="https://ffxivcollect.com/" target="_blank" rel="noopener">FFXIV Collect</a>.</p>
     </div>
@@ -831,10 +964,10 @@
   <p class="footer-note" id="footerNote">the slave fetches; the slave does not explain itself.</p>
   </div>
 
-  <div id="personalStatsPage" class="hidden">
-    <div class="row" style="align-items:center; margin-bottom:14px;">
-      <button id="personalStatsBackBtn" class="secondary" type="button">← Back</button>
-      <h2 style="margin:0; color:var(--accent);">📜 The Slave's Personal Stats</h2>
+  <div id="personalStatsPage" class="tab-panel hidden">
+    <div class="window-titlebar" data-win="personalStats">
+      <span class="window-title">📜 The Slave's Personal Stats</span>
+      <button class="window-close-btn" type="button" data-win="personalStats" title="Close">✕</button>
     </div>
 
     <div class="panel" id="slaveReportPanel">
@@ -930,21 +1063,193 @@ document.getElementById('themeToggleBtn').addEventListener('click', ()=>{
   applyTheme(isDark ? 'light' : 'dark');
 });
 
-// --- Tabs ---
-const TAB_IDS = ['craft', 'lookup', 'shopping', 'profit', 'watch', 'glamour', 'unlockables'];
-function showTab(tab){
-  TAB_IDS.forEach(t => {
-    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('hidden', t !== tab);
-    document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+// --- Windows: every page (formerly a horizontal tab) is now its own
+// independently open/closeable, draggable floating window. Several can be
+// open at once; the left-side launcher sidebar opens/focuses them, and each
+// window's own titlebar drags it around or closes it. On narrow screens
+// (<900px) windows fall back to plain stacked full-width panels instead. ---
+const WINDOW_IDS = ['craft', 'lookup', 'shopping', 'profit', 'watch', 'glamour', 'unlockables', 'personalStats'];
+function windowElId(id){
+  return id === 'personalStats' ? 'personalStatsPage' : ('tab' + id.charAt(0).toUpperCase() + id.slice(1));
+}
+function isNarrowViewport(){ return window.innerWidth < 900; }
+function loadWindowState(){
+  try{ return JSON.parse(localStorage.getItem('lycaas_window_state') || '{}'); }
+  catch(e){ return {}; }
+}
+function saveWindowState(state){ localStorage.setItem('lycaas_window_state', JSON.stringify(state)); }
+function isWindowOpen(id){ return !document.getElementById(windowElId(id)).classList.contains('hidden'); }
+
+let topWindowZ = 100;
+function bringToFront(id){
+  topWindowZ += 1;
+  document.getElementById(windowElId(id)).style.zIndex = String(topWindowZ);
+}
+
+// New windows (without a remembered position) cascade to the right of the
+// launcher sidebar, wrapping down to a new "row" once they'd run off the
+// right edge of the viewport — a simple stand-in for "position on the right,
+// or below if there's no room."
+function autoPlaceWindow(id){
+  if (isNarrowViewport()) return; // static stacked layout on mobile — no positioning needed
+  const el = document.getElementById(windowElId(id));
+  const baseX = 220, baseY = 90;
+  const colWidth = 500, rowStep = 34;
+  const otherOpenCount = WINDOW_IDS.filter(w => w !== id && isWindowOpen(w)).length;
+  const perRow = Math.max(1, Math.floor((window.innerWidth - baseX - 20) / colWidth));
+  const row = Math.floor(otherOpenCount / perRow);
+  const col = otherOpenCount % perRow;
+  let left = baseX + col * colWidth + row * rowStep;
+  let top = baseY + row * (rowStep + 40);
+  left = Math.min(left, window.innerWidth - 120);
+  top = Math.min(top, window.innerHeight - 120);
+  el.style.left = left + 'px';
+  el.style.top = top + 'px';
+}
+function clampWindowToViewport(id){
+  if (isNarrowViewport()) return;
+  const el = document.getElementById(windowElId(id));
+  if (el.classList.contains('hidden')) return;
+  const rect = el.getBoundingClientRect();
+  let left = rect.left, top = rect.top;
+  left = Math.max(4, Math.min(window.innerWidth - 80, left));
+  top = Math.max(4, Math.min(window.innerHeight - 60, top));
+  el.style.left = left + 'px';
+  el.style.top = top + 'px';
+}
+
+function updateLauncherActiveState(){
+  document.querySelectorAll('.launcher-btn[data-win]').forEach(btn=>{
+    btn.classList.toggle('open', isWindowOpen(btn.dataset.win));
   });
 }
-document.getElementById('tabBtnCraft').addEventListener('click', ()=>showTab('craft'));
-document.getElementById('tabBtnLookup').addEventListener('click', ()=>showTab('lookup'));
-document.getElementById('tabBtnShopping').addEventListener('click', ()=>showTab('shopping'));
-document.getElementById('tabBtnProfit').addEventListener('click', ()=>showTab('profit'));
-document.getElementById('tabBtnWatch').addEventListener('click', ()=>showTab('watch'));
-document.getElementById('tabBtnGlamour').addEventListener('click', ()=>showTab('glamour'));
-document.getElementById('tabBtnUnlockables').addEventListener('click', ()=>showTab('unlockables'));
+
+function openWindow(id){
+  const el = document.getElementById(windowElId(id));
+  const wasHidden = el.classList.contains('hidden');
+  el.classList.remove('hidden');
+  bringToFront(id);
+  if (wasHidden){
+    const state = loadWindowState();
+    const saved = state[id];
+    if (!isNarrowViewport()){
+      if (saved && saved.left != null && saved.top != null){
+        el.style.left = saved.left + 'px';
+        el.style.top = saved.top + 'px';
+      } else {
+        autoPlaceWindow(id);
+      }
+      clampWindowToViewport(id);
+    }
+    state[id] = Object.assign({}, saved, { open: true });
+    saveWindowState(state);
+  }
+  if (id === 'personalStats'){
+    renderSlaveReport();
+    renderLycaaLabor();
+    renderFunStats();
+  }
+  updateLauncherActiveState();
+}
+function closeWindow(id){
+  document.getElementById(windowElId(id)).classList.add('hidden');
+  const state = loadWindowState();
+  state[id] = Object.assign({}, state[id], { open: false });
+  saveWindowState(state);
+  updateLauncherActiveState();
+}
+function toggleWindow(id){
+  if (isWindowOpen(id)) bringToFront(id); else openWindow(id);
+}
+function resetWindowLayout(){
+  WINDOW_IDS.forEach(id => closeWindow(id));
+  localStorage.removeItem('lycaas_window_state');
+  openWindow('craft');
+}
+
+function makeWindowDraggable(id){
+  const el = document.getElementById(windowElId(id));
+  const handle = el.querySelector('.window-titlebar');
+  if (!handle) return;
+  let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+  handle.addEventListener('pointerdown', (e)=>{
+    if (e.target.closest('.window-close-btn') || isNarrowViewport()) return;
+    dragging = true;
+    bringToFront(id);
+    startX = e.clientX; startY = e.clientY;
+    const rect = el.getBoundingClientRect();
+    startLeft = rect.left; startTop = rect.top;
+    try{ handle.setPointerCapture(e.pointerId); }catch(err){}
+  });
+  handle.addEventListener('pointermove', (e)=>{
+    if (!dragging) return;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    let newLeft = startLeft + dx, newTop = startTop + dy;
+    newLeft = Math.max(4, Math.min(window.innerWidth - 80, newLeft));
+    newTop = Math.max(4, Math.min(window.innerHeight - 60, newTop));
+    el.style.left = newLeft + 'px';
+    el.style.top = newTop + 'px';
+  });
+  function endDrag(){
+    if (!dragging) return;
+    dragging = false;
+    const rect = el.getBoundingClientRect();
+    const state = loadWindowState();
+    state[id] = Object.assign({}, state[id], { left: rect.left, top: rect.top });
+    saveWindowState(state);
+  }
+  handle.addEventListener('pointerup', endDrag);
+  handle.addEventListener('pointercancel', endDrag);
+}
+
+WINDOW_IDS.forEach(id => makeWindowDraggable(id));
+document.querySelectorAll('.launcher-btn[data-win]').forEach(btn=>{
+  btn.addEventListener('click', ()=>toggleWindow(btn.dataset.win));
+});
+document.getElementById('windowResetBtn').addEventListener('click', resetWindowLayout);
+document.addEventListener('click', (e)=>{
+  const closeBtn = e.target.closest('.window-close-btn');
+  if (closeBtn && closeBtn.dataset.win) closeWindow(closeBtn.dataset.win);
+});
+let windowResizeTimer = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(windowResizeTimer);
+  windowResizeTimer = setTimeout(()=>{ WINDOW_IDS.forEach(id => clampWindowToViewport(id)); }, 150);
+});
+
+// --- Information modal: a plain pop-up (not one of the draggable windows)
+// explaining what everything does. Shown automatically once on a brand-new
+// visit, and reachable anytime via the "Information" button. ---
+function openInfoModal(){ document.getElementById('infoModalBackdrop').classList.remove('hidden'); }
+function closeInfoModal(){ document.getElementById('infoModalBackdrop').classList.add('hidden'); }
+document.getElementById('infoBtn').addEventListener('click', openInfoModal);
+document.getElementById('infoModalCloseBtn').addEventListener('click', closeInfoModal);
+document.getElementById('infoModalBackdrop').addEventListener('click', (e)=>{
+  if (e.target.id === 'infoModalBackdrop') closeInfoModal();
+});
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape' && !document.getElementById('infoModalBackdrop').classList.contains('hidden')) closeInfoModal();
+});
+document.querySelectorAll('.info-open-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    closeInfoModal();
+    openWindow(btn.dataset.openWin);
+  });
+});
+
+(function restoreWindowLayout(){
+  const state = loadWindowState();
+  const hasAnySavedState = Object.keys(state).length > 0;
+  if (!hasAnySavedState){
+    openWindow('craft');
+    openInfoModal();
+    return;
+  }
+  WINDOW_IDS.forEach(id => {
+    if (state[id] && state[id].open) openWindow(id);
+  });
+  updateLauncherActiveState();
+})();
 
 // --- Watchlist's own internal sub-tabs (Watching / Economy) — a smaller
 // version of the same pattern, scoped to just that one tab. ---
@@ -971,24 +1276,6 @@ function showUnlockSubTab(name){
 UNLOCK_SUBTAB_IDS.forEach(t => {
   document.getElementById('unlockSubBtn' + t).addEventListener('click', ()=>showUnlockSubTab(t));
 });
-
-// --- Standalone Personal Stats page (covers stats from every tab, not just
-// the Watchlist) — swaps out the main tab content entirely while open. ---
-let personalStatsPreviousTab = null;
-function openPersonalStats(){
-  personalStatsPreviousTab = TAB_IDS.find(t => !document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.contains('hidden')) || 'craft';
-  document.getElementById('mainContent').classList.add('hidden');
-  document.getElementById('personalStatsPage').classList.remove('hidden');
-  renderSlaveReport();
-  renderLycaaLabor();
-  renderFunStats();
-}
-function closePersonalStats(){
-  document.getElementById('personalStatsPage').classList.add('hidden');
-  document.getElementById('mainContent').classList.remove('hidden');
-}
-document.getElementById('personalStatsBtn').addEventListener('click', openPersonalStats);
-document.getElementById('personalStatsBackBtn').addEventListener('click', closePersonalStats);
 
 // Used for JSON APIs (Garland Tools, Universalis) — no "reader" services here since
 // those reformat content and would break JSON.parse.
@@ -2351,7 +2638,7 @@ function renderGlamour(items, screenshots, glamourMeta){
   document.querySelectorAll('.price-in-craft-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const name = btn.dataset.name;
-      showTab('craft');
+      openWindow('craft');
       document.getElementById('wikiUrl').value = name;
       lookupRecipe();
     });
