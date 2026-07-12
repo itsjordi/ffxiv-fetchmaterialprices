@@ -366,10 +366,18 @@
     display:flex; flex-direction:column; align-items:center; gap:6px;
     background:var(--panel); border:1px solid var(--border); border-radius:2px;
     padding:10px 6px; color:var(--ink); text-align:center;
+    min-width:0; max-width:100%; overflow:hidden; box-sizing:border-box;
   }
   .unlock-card:hover{border-color:var(--accent-dim); color:var(--accent);}
-  .unlock-card img{width:48px; height:48px; object-fit:contain;}
-  .unlock-card span{font-size:.78rem; line-height:1.2;}
+  .unlock-card img{width:48px; height:48px; object-fit:contain; max-width:100%;}
+  .unlock-card span{
+    font-size:.78rem; line-height:1.2; width:100%;
+    overflow-wrap:break-word; word-break:break-word; hyphens:auto;
+  }
+  .unlock-card-price{
+    font-size:.72rem !important; font-weight:700; color:var(--good);
+    font-variant-numeric:tabular-nums; font-style:italic;
+  }
   .unlock-detail img{background:var(--panel2);}
 
   /* --- Moogle easter egg: rarely flies across the screen, purely for fun. --- */
@@ -4180,6 +4188,7 @@ async function searchUnlockable(type){
     }
     resultsEl.innerHTML = renderUnlockableList(results);
     wireUnlockableCards(type, results, resultsEl);
+    loadUnlockablePrices(results, resultsEl);
     bumpStat('searches', 1);
     unlockUI.log('Done.');
   }catch(e){
@@ -4195,8 +4204,33 @@ function renderUnlockableList(results){
     <button class="unlock-card" type="button" data-idx="${idx}">
       <img src="${r.icon || r.image}" alt="" loading="lazy">
       <span>${r.name}</span>
+      ${(r.tradeable && r.item_id) ? '<span class="unlock-card-price" data-idx="' + idx + '">checking…</span>' : ''}
     </button>
   `).join('') + '</div>';
+}
+
+// Marketboard-tradeable mounts/minions/fashion accessories get a live price
+// badge right on the result grid — one batched Universalis request per
+// search instead of a separate fetch per card.
+async function loadUnlockablePrices(results, resultsEl){
+  const priceable = results.map((r, idx) => ({ r, idx })).filter(x => x.r.tradeable && x.r.item_id);
+  if (!priceable.length) return;
+  try{
+    const worldFilter = getActiveWorldFilter();
+    const ids = priceable.map(x => x.r.item_id);
+    const priceResult = await fetchPrices(FIXED_WORLD, ids, unlockUI.log);
+    priceable.forEach(x => {
+      const badge = resultsEl.querySelector('.unlock-card-price[data-idx="' + x.idx + '"]');
+      if (!badge) return;
+      const priceEntry = priceResult.items[x.r.item_id];
+      const priced = priceEntry ? priceForQuantity(priceEntry, 1, worldFilter, true) : null;
+      badge.textContent = priced ? (fmt(priced.unit) + 'g') : 'no listings';
+    });
+  }catch(e){
+    // Price badges are a nice-to-have — a failed batch fetch shouldn't
+    // interrupt the search itself, just leave the badges as they were.
+    resultsEl.querySelectorAll('.unlock-card-price').forEach(b => { if (b.textContent === 'checking…') b.textContent = '—'; });
+  }
 }
 
 function wireUnlockableCards(type, results, resultsEl){
@@ -4215,7 +4249,11 @@ async function showUnlockableDetail(type, item, resultsEl){
   el.innerHTML = renderUnlockableDetail(type, item);
   el.querySelector('.unlock-back-btn').addEventListener('click', ()=>{
     const last = unlockLastResults[type];
-    if (last){ el.innerHTML = renderUnlockableList(last); wireUnlockableCards(type, last, el); }
+    if (last){
+      el.innerHTML = renderUnlockableList(last);
+      wireUnlockableCards(type, last, el);
+      loadUnlockablePrices(last, el);
+    }
   });
   if (item.tradeable && item.item_id){
     const slotId = 'unlockPriceSlot-' + type + '-' + item.id;
