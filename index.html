@@ -71,6 +71,10 @@
   #log:empty{display:none;}
   .log-err{color:var(--bad);}
   table{width:100%; border-collapse:collapse; font-size:.92rem;}
+  /* A too-wide table (long ingredient names, badges, etc.) scrolls sideways
+     inside its own row instead of stretching the whole floating window. */
+  .table-scroll{overflow-x:auto; max-width:100%;}
+  .table-scroll table{width:100%; min-width:480px;}
   th, td{text-align:left; padding:10px 8px; border-bottom:1px solid var(--border);}
   th{color:var(--accent); font-weight:700; font-size:.78rem; text-transform:uppercase; letter-spacing:.5px;}
   td.num, th.num{text-align:right; font-variant-numeric:tabular-nums;}
@@ -141,11 +145,18 @@
   .launcher-btn:hover{border-color:var(--border); background:var(--panel2);}
   .launcher-btn.open{color:var(--accent); font-weight:700; background:var(--panel2); border-color:var(--border);}
   .launcher-reset-btn{border-top:1px dashed var(--border); margin-top:4px; padding-top:10px; color:var(--dim); font-size:.85rem;}
+  .launcher-divider{
+    border-top:1px dashed var(--border); margin-top:8px; padding:8px 0 2px;
+    font-size:.7rem; text-transform:uppercase; letter-spacing:.5px; color:var(--dim); font-style:italic;
+  }
 
   .tab-panel{
-    position:fixed; top:100px; left:220px; width:480px; max-width:calc(100vw - 32px); max-height:min(640px, 82vh);
+    position:fixed; top:100px; left:220px; width:560px;
+    min-width:280px; min-height:160px;
+    max-width:calc(100vw - 32px); max-height:calc(100vh - 32px);
     background:var(--paper); border:1px solid var(--border); border-radius:6px;
-    box-shadow:0 10px 28px rgba(0,0,0,.28); overflow-y:auto; z-index:100; padding:14px;
+    box-shadow:0 10px 28px rgba(0,0,0,.28); overflow:auto; z-index:100; padding:14px;
+    resize:both;
   }
   .window-titlebar{
     position:sticky; top:-14px; margin:-14px -14px 12px; z-index:2;
@@ -167,7 +178,7 @@
     }
     .tab-panel{
       position:static !important; width:100% !important; max-width:100% !important;
-      max-height:none !important; margin-bottom:16px; box-shadow:none;
+      max-height:none !important; margin-bottom:16px; box-shadow:none; resize:none;
     }
     .window-titlebar{cursor:default;}
   }
@@ -228,7 +239,13 @@
   .lookup-result{margin-top:4px;}
   .lookup-result h3{margin:0 0 4px;}
 
-  #basketBar{margin-bottom:16px;}
+  #basketBar{
+    position:fixed; top:16px; right:16px; z-index:9000; width:300px;
+    max-width:calc(100vw - 32px); max-height:80vh; overflow-y:auto;
+  }
+  @media (max-width:900px){
+    #basketBar{position:static; width:auto; max-height:none; margin-bottom:16px;}
+  }
   .basket-item{
     display:flex; justify-content:space-between; align-items:center; gap:10px;
     padding:8px 0; border-bottom:1px dashed var(--border); font-size:.9rem;
@@ -419,6 +436,11 @@
     <button class="launcher-btn" type="button" data-win="watch">📊 <span>Watchlist</span></button>
     <button class="launcher-btn" type="button" data-win="unlockables">🐴 <span>Unlockables</span></button>
     <button class="launcher-btn" type="button" data-win="personalStats">📜 <span>Personal Stats</span></button>
+    <div class="launcher-divider">Presets</div>
+    <button class="launcher-btn" type="button" data-preset="glamourFitting" title="Glamour + Craft Cost + Shopping List, arranged side by side">👗 <span>Glamour Fitting</span></button>
+    <button class="launcher-btn" type="button" data-preset="craftingDesk" title="Craft Cost + Profit Calc + Shopping List, arranged side by side">📦 <span>Crafting Desk</span></button>
+    <button class="launcher-btn" type="button" data-preset="marketWatch" title="Watchlist + Item Lookup, side by side">📊 <span>Market Watch</span></button>
+    <button class="launcher-btn" type="button" data-preset="collectorsCorner" title="Unlockables + Personal Stats, side by side">🐴 <span>Collector's Corner</span></button>
     <button class="launcher-btn launcher-reset-btn" type="button" id="windowResetBtn" title="Close everything and reset window positions">⊞ <span>Reset layout</span></button>
   </div>
 
@@ -508,10 +530,10 @@
 
   <div class="panel" id="basketBar">
     <div class="row" style="align-items:center; margin-bottom:0;">
-      <button id="basketToggleBtn" class="secondary">🧺 Basket (<span id="basketCount">0</span>) <span id="basketTotal"></span></button>
-      <span class="recipe-meta" style="margin:0; flex:1;">Add things you want made, then copy the list for Lycaa.</span>
+      <button id="basketToggleBtn" class="secondary" style="flex:1;">🧺 Basket (<span id="basketCount">0</span>) <span id="basketTotal"></span></button>
     </div>
     <div id="basketPanel" class="hidden" style="margin-top:12px;">
+      <p class="recipe-meta" style="margin-top:0;">Add things you want made, then copy the list for Lycaa.</p>
       <div id="basketItems"></div>
       <div class="row" style="margin-top:10px;">
         <button id="copyBasketBtn">Copy basket for Lycaa</button>
@@ -1094,7 +1116,7 @@ function autoPlaceWindow(id){
   if (isNarrowViewport()) return; // static stacked layout on mobile — no positioning needed
   const el = document.getElementById(windowElId(id));
   const baseX = 220, baseY = 90;
-  const colWidth = 500, rowStep = 34;
+  const colWidth = 580, rowStep = 34;
   const otherOpenCount = WINDOW_IDS.filter(w => w !== id && isWindowOpen(w)).length;
   const perRow = Math.max(1, Math.floor((window.innerWidth - baseX - 20) / colWidth));
   const row = Math.floor(otherOpenCount / perRow);
@@ -1139,6 +1161,8 @@ function openWindow(id){
       } else {
         autoPlaceWindow(id);
       }
+      if (saved && saved.width != null) el.style.width = saved.width + 'px';
+      if (saved && saved.height != null) el.style.height = saved.height + 'px';
       clampWindowToViewport(id);
     }
     state[id] = Object.assign({}, saved, { open: true });
@@ -1165,6 +1189,71 @@ function resetWindowLayout(){
   WINDOW_IDS.forEach(id => closeWindow(id));
   localStorage.removeItem('lycaas_window_state');
   openWindow('craft');
+}
+
+// --- Preset layouts: curated groups of windows that naturally get used
+// together, tiled to fit whatever screen space is available. Positions are
+// fractions of the usable canvas (viewport minus the sidebar/top bars), not
+// fixed pixels, so they adapt to different screen sizes. ---
+const WINDOW_PRESETS = {
+  glamourFitting: {
+    windows: [
+      { id: 'glamour',  xFrac: 0,    yFrac: 0,    wFrac: 0.38, hFrac: 1 },
+      { id: 'craft',    xFrac: 0.40, yFrac: 0,    wFrac: 0.60, hFrac: 0.48 },
+      { id: 'shopping', xFrac: 0.40, yFrac: 0.52, wFrac: 0.60, hFrac: 0.48 },
+    ]
+  },
+  craftingDesk: {
+    windows: [
+      { id: 'craft',    xFrac: 0,    yFrac: 0,    wFrac: 0.55, hFrac: 1 },
+      { id: 'profit',   xFrac: 0.57, yFrac: 0,    wFrac: 0.43, hFrac: 0.48 },
+      { id: 'shopping', xFrac: 0.57, yFrac: 0.52, wFrac: 0.43, hFrac: 0.48 },
+    ]
+  },
+  marketWatch: {
+    windows: [
+      { id: 'watch',  xFrac: 0,    yFrac: 0, wFrac: 0.58, hFrac: 1 },
+      { id: 'lookup', xFrac: 0.60, yFrac: 0, wFrac: 0.40, hFrac: 1 },
+    ]
+  },
+  collectorsCorner: {
+    windows: [
+      { id: 'unlockables',   xFrac: 0,    yFrac: 0, wFrac: 0.48, hFrac: 1 },
+      { id: 'personalStats', xFrac: 0.50, yFrac: 0, wFrac: 0.48, hFrac: 1 },
+    ]
+  }
+};
+function applyPreset(name){
+  const preset = WINDOW_PRESETS[name];
+  if (!preset) return;
+  WINDOW_IDS.forEach(id => closeWindow(id));
+  if (isNarrowViewport()){
+    // Fixed side-by-side math doesn't help on a phone — just open the set,
+    // which the mobile CSS already stacks full-width in order.
+    preset.windows.forEach(w => openWindow(w.id));
+    return;
+  }
+  const canvasLeft = 220, canvasTop = 90, gap = 12;
+  const canvasWidth = Math.max(600, window.innerWidth - canvasLeft - 24);
+  const canvasHeight = Math.max(400, window.innerHeight - canvasTop - 24);
+  const state = loadWindowState();
+  preset.windows.forEach(w => {
+    const el = document.getElementById(windowElId(w.id));
+    el.classList.remove('hidden');
+    const left = Math.round(canvasLeft + w.xFrac * canvasWidth);
+    const top = Math.round(canvasTop + w.yFrac * canvasHeight);
+    const width = Math.round(Math.max(280, w.wFrac * canvasWidth - gap));
+    const height = Math.round(Math.max(160, w.hFrac * canvasHeight - gap));
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+    el.style.width = width + 'px';
+    el.style.height = height + 'px';
+    bringToFront(w.id);
+    state[w.id] = Object.assign({}, state[w.id], { open: true, left, top, width, height });
+    if (w.id === 'personalStats'){ renderSlaveReport(); renderLycaaLabor(); renderFunStats(); }
+  });
+  saveWindowState(state);
+  updateLauncherActiveState();
 }
 
 function makeWindowDraggable(id){
@@ -1202,9 +1291,36 @@ function makeWindowDraggable(id){
   handle.addEventListener('pointercancel', endDrag);
 }
 
+// Windows are natively resizable via CSS `resize:both` (drag the browser's own
+// grip in the bottom-right corner) — a ResizeObserver just watches for that
+// and remembers the size, the same way dragging remembers position.
+const windowResizeObservers = {};
+function makeWindowResizable(id){
+  if (typeof ResizeObserver === 'undefined') return; // graceful no-op if unsupported
+  const el = document.getElementById(windowElId(id));
+  let saveTimer = null;
+  const observer = new ResizeObserver(()=>{
+    if (isNarrowViewport() || el.classList.contains('hidden')) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=>{
+      const rect = el.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const state = loadWindowState();
+      state[id] = Object.assign({}, state[id], { width: Math.round(rect.width), height: Math.round(rect.height) });
+      saveWindowState(state);
+    }, 300);
+  });
+  observer.observe(el);
+  windowResizeObservers[id] = observer;
+}
+
 WINDOW_IDS.forEach(id => makeWindowDraggable(id));
+WINDOW_IDS.forEach(id => makeWindowResizable(id));
 document.querySelectorAll('.launcher-btn[data-win]').forEach(btn=>{
   btn.addEventListener('click', ()=>toggleWindow(btn.dataset.win));
+});
+document.querySelectorAll('.launcher-btn[data-preset]').forEach(btn=>{
+  btn.addEventListener('click', ()=>applyPreset(btn.dataset.preset));
 });
 document.getElementById('windowResetBtn').addEventListener('click', resetWindowLayout);
 document.addEventListener('click', (e)=>{
@@ -2228,7 +2344,7 @@ function renderAcquisitionDetail(row){
       ? ('The cheapest listing didn\'t have ' + row.amount + ' in stock, and listings can\'t be split, so this buys whole lots from more than one:')
       : ('That listing is a lot of ' + row.acquiredQty + ' — you can\'t buy just ' + row.amount + ' out of it, so this buys (and pays for) the whole lot:');
     listingsHtml = '<p class="recipe-meta" style="margin:0 0 8px;">' + explain + '</p>'
-      + '<table class="mini-table"><thead><tr>'
+      + '<div class="table-scroll"><table class="mini-table"><thead><tr>'
       + '<th>Listing</th><th class="num">Lot size</th><th class="num">Price</th><th class="num">Subtotal</th>'
       + '</tr></thead><tbody>'
       + row.listingsUsed.map(l => (
@@ -2237,7 +2353,7 @@ function renderAcquisitionDetail(row){
           + '<td class="num">' + fmt(l.price) + 'g</td>'
           + '<td class="num">' + fmt(l.qty * l.price) + 'g</td></tr>'
         )).join('')
-      + '</tbody></table>'
+      + '</tbody></table></div>'
       + (row.acquiredQty > row.amount
           ? ('<p class="recipe-meta" style="margin:6px 0 0;">You needed ' + row.amount + ' but end up with ' + row.acquiredQty + ' — the extra ' + (row.acquiredQty - row.amount) + ' comes along for free since it\'s the same lot.</p>')
           : '');
@@ -2260,7 +2376,7 @@ function renderAcquisitionDetail(row){
         + 'but you could craft it yourself (' + row.subJobName + ') for roughly ~' + fmt(craftTotal) + 'g in raw materials for '
         + row.amount + '.</p>';
     }
-    compareHtml += '<table class="mini-table"><thead><tr>'
+    compareHtml += '<div class="table-scroll"><table class="mini-table"><thead><tr>'
       + '<th>Sub-ingredient</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Subtotal</th>'
       + '</tr></thead><tbody>'
       + row.craftCost.breakdown.map(b => {
@@ -2275,7 +2391,7 @@ function renderAcquisitionDetail(row){
             + '<td class="num">' + unitCell + '</td>'
             + '<td class="num">' + fmt(b.subtotal) + 'g</td></tr>';
         }).join('')
-      + '</tbody></table>';
+      + '</tbody></table></div>';
   }
 
   const universalisPart = row.tradeable
@@ -2387,7 +2503,7 @@ function renderResults(itemName, recipe, world, rows){
   document.getElementById('results').innerHTML = `
     <div class="panel">
       <h3 style="margin-top:0;">${itemName} <span style="color:var(--dim); font-weight:400; font-size:.85rem;">— ${jobName}, Lv.${recipe.lvl}</span></h3>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr>
           <th>Ingredient</th><th class="num">Qty</th><th class="num">Unit price</th><th>Source world</th><th class="num">Subtotal</th>
         </tr></thead>
@@ -2398,7 +2514,7 @@ function renderResults(itemName, recipe, world, rows){
             <td class="num">${fmt(total)}g</td>
           </tr>
         </tbody>
-      </table>
+      </table></div>
       ${anyProhibited ? '<p class="recipe-meta prohibited">Some ingredients are market prohibited and excluded from the total.</p>' : ''}
       ${anyNoListings ? '<p class="recipe-meta nolistings">Some ingredients currently have no listings (either on ' + world + ' at all, or just not on your selected world).</p>' : ''}
       <p class="recipe-meta">Prices are the cheapest single listing found across the Light data center at lookup time. They change constantly.</p>
@@ -3037,7 +3153,7 @@ function renderShoppingList(perItem, rows){
   document.getElementById('shoppingResults').innerHTML = `
     <div class="panel">
       <h3 style="margin-top:0;">Combined shopping list <span style="color:var(--dim); font-weight:400; font-size:.85rem;">— ${perItem.length - skipped.length} recipe(s) from your basket</span></h3>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr>
           <th>Ingredient</th><th class="num">Total qty</th><th class="num">Unit price</th><th>Source world</th><th class="num">Subtotal</th>
         </tr></thead>
@@ -3048,7 +3164,7 @@ function renderShoppingList(perItem, rows){
             <td class="num">${fmt(total)}g</td>
           </tr>
         </tbody>
-      </table>
+      </table></div>
       ${anyProhibited ? '<p class="recipe-meta prohibited">Some ingredients are market prohibited and excluded from the total.</p>' : ''}
       ${anyNoListings ? '<p class="recipe-meta nolistings">Some ingredients currently have no one selling on ' + FIXED_WORLD + '.</p>' : ''}
       ${skipped.length ? '<p class="recipe-meta prohibited">Couldn\'t resolve: ' + skipped.map(s=>s.basketItem.name).join(', ') + '.</p>' : ''}
@@ -3208,7 +3324,7 @@ function renderProfit(name, recipe, gtId, matRows, craftTotal, sellPrice){
     <div class="panel">
       <h3 style="margin-top:0;">${name} <span style="color:var(--dim); font-weight:400; font-size:.85rem;">— ${jobName}, Lv.${recipe.lvl}</span></h3>
       ${marginHtml}
-      <table style="margin-top:12px;">
+      <div class="table-scroll"><table style="margin-top:12px;">
         <thead><tr>
           <th>Ingredient</th><th class="num">Qty</th><th class="num">Unit price</th><th>Source world</th><th class="num">Subtotal</th>
         </tr></thead>
@@ -3219,7 +3335,7 @@ function renderProfit(name, recipe, gtId, matRows, craftTotal, sellPrice){
             <td class="num">${fmt(craftTotal)}g</td>
           </tr>
         </tbody>
-      </table>
+      </table></div>
       <p class="acq-link" style="margin:10px 0 0;"><a href="https://universalis.app/market/${gtId}" target="_blank" rel="noopener">Check this item on Universalis →</a></p>
     </div>
   `;
