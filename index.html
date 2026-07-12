@@ -281,6 +281,37 @@
     .ticker-price, .ticker-change{text-align:left;}
     .ticker-actions{justify-self:start;}
   }
+
+  .unlock-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:8px;
+  }
+  .unlock-card{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    background:var(--panel); border:1px solid var(--border); border-radius:2px;
+    padding:10px 6px; color:var(--ink); text-align:center;
+  }
+  .unlock-card:hover{border-color:var(--accent-dim); color:var(--accent);}
+  .unlock-card img{width:48px; height:48px; object-fit:contain;}
+  .unlock-card span{font-size:.78rem; line-height:1.2;}
+  .unlock-detail img{background:var(--panel2);}
+
+  /* --- Moogle easter egg: rarely flies across the screen, purely for fun. --- */
+  .moogle-egg{
+    position:fixed; left:-60px; width:46px; height:46px; z-index:9999;
+    cursor:pointer; animation-name:moogleFly; animation-timing-function:linear; animation-fill-mode:forwards;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,.25));
+  }
+  .moogle-egg.caught{animation-play-state:paused;}
+  @keyframes moogleFly{
+    0%{ left:-60px; transform:translateY(0); }
+    50%{ transform:translateY(-14px); }
+    100%{ left:calc(100vw + 60px); transform:translateY(0); }
+  }
+  .moogle-bubble{
+    position:fixed; background:var(--panel); border:1px solid var(--accent-dim); color:var(--ink);
+    padding:10px 14px; border-radius:8px; font-size:.82rem; max-width:230px; z-index:10000;
+    box-shadow:0 4px 14px rgba(0,0,0,.3); font-style:italic;
+  }
 </style>
 <script>
   // Applied immediately (before the rest of the page renders) so switching
@@ -382,6 +413,7 @@
     <button class="tab-btn" id="tabBtnShopping">Shopping List</button>
     <button class="tab-btn" id="tabBtnProfit">Profit Calc</button>
     <button class="tab-btn" id="tabBtnWatch">Watchlist</button>
+    <button class="tab-btn" id="tabBtnUnlockables">Unlockables</button>
   </div>
 
   <div id="tabCraft" class="tab-panel">
@@ -705,6 +737,97 @@
     <div id="glamourResults"></div>
   </div>
 
+  <div id="tabUnlockables" class="tab-panel hidden">
+    <div class="panel">
+      <p class="recipe-meta" style="margin-top:0;">Look up mounts, minions, emotes, and fashion accessories — see what they look like and how to get them. Data via <a href="https://ffxivcollect.com/" target="_blank" rel="noopener">FFXIV Collect</a>.</p>
+    </div>
+
+    <div class="watch-subtabs">
+      <button class="watch-subtab-btn active" id="unlockSubBtnMount">🐴 Mount</button>
+      <button class="watch-subtab-btn" id="unlockSubBtnMinion">🐣 Minion</button>
+      <button class="watch-subtab-btn" id="unlockSubBtnEmote">💃 Emote</button>
+      <button class="watch-subtab-btn" id="unlockSubBtnFashion">🎩 Fashion Accessory</button>
+    </div>
+
+    <div id="unlockSubMount">
+      <div class="panel">
+        <div class="row">
+          <div class="field" style="flex:1;">
+            <label for="unlockMountInput">Mount name</label>
+            <input type="text" id="unlockMountInput" placeholder="e.g. Kirin">
+          </div>
+        </div>
+        <div class="row"><button id="unlockMountBtn">Search mounts</button></div>
+        <div id="unlockMountRecent" class="recent-strip hidden"></div>
+      </div>
+      <div id="unlockMountResults"></div>
+    </div>
+
+    <div id="unlockSubMinion" class="hidden">
+      <div class="panel">
+        <div class="row">
+          <div class="field" style="flex:1;">
+            <label for="unlockMinionInput">Minion name</label>
+            <input type="text" id="unlockMinionInput" placeholder="e.g. Wind-up">
+          </div>
+        </div>
+        <div class="row"><button id="unlockMinionBtn">Search minions</button></div>
+        <div id="unlockMinionRecent" class="recent-strip hidden"></div>
+      </div>
+      <div id="unlockMinionResults"></div>
+    </div>
+
+    <div id="unlockSubEmote" class="hidden">
+      <div class="panel">
+        <div class="row">
+          <div class="field" style="flex:1;">
+            <label for="unlockEmoteInput">Emote name</label>
+            <input type="text" id="unlockEmoteInput" placeholder="e.g. wave">
+          </div>
+        </div>
+        <div class="row"><button id="unlockEmoteBtn">Search emotes</button></div>
+        <div id="unlockEmoteRecent" class="recent-strip hidden"></div>
+      </div>
+      <div id="unlockEmoteResults"></div>
+    </div>
+
+    <div id="unlockSubFashion" class="hidden">
+      <div class="panel">
+        <div class="row">
+          <div class="field" style="flex:1;">
+            <label for="unlockFashionInput">Fashion accessory name</label>
+            <input type="text" id="unlockFashionInput" placeholder="e.g. Shovel">
+          </div>
+        </div>
+        <div class="row"><button id="unlockFashionBtn">Search fashion accessories</button></div>
+        <div id="unlockFashionRecent" class="recent-strip hidden"></div>
+      </div>
+      <div id="unlockFashionResults"></div>
+    </div>
+
+    <div id="unlockFriendlyStatus" class="friendly-status hidden">
+      <span class="spinner-emoji">🪙</span>
+      <span id="unlockFriendlyText">Thinking...</span>
+    </div>
+
+    <div id="unlockErrorCard" class="panel error-card hidden">
+      <p class="funny-line" id="unlockErrorFunny"></p>
+      <div class="row">
+        <button id="unlockCopyErrorBtn" class="secondary">Copy error for Lycaa</button>
+        <span id="unlockCopyConfirm" class="copy-confirm hidden">Copied. Go forth.</span>
+      </div>
+      <details>
+        <summary style="cursor:pointer; color:var(--dim); font-style:italic; font-size:.8rem;">Technical details</summary>
+        <pre id="unlockErrorTech" style="white-space:pre-wrap; font-size:.78rem; color:var(--dim); margin-top:8px;"></pre>
+      </details>
+    </div>
+
+    <details id="unlockLogDetails" class="tech-log-details">
+      <summary>Technical log (for the curious, or for Lycaa)</summary>
+      <pre id="unlockLog"></pre>
+    </details>
+  </div>
+
   <p class="footer-note" id="footerNote">the slave fetches; the slave does not explain itself.</p>
   </div>
 
@@ -808,7 +931,7 @@ document.getElementById('themeToggleBtn').addEventListener('click', ()=>{
 });
 
 // --- Tabs ---
-const TAB_IDS = ['craft', 'lookup', 'shopping', 'profit', 'watch', 'glamour'];
+const TAB_IDS = ['craft', 'lookup', 'shopping', 'profit', 'watch', 'glamour', 'unlockables'];
 function showTab(tab){
   TAB_IDS.forEach(t => {
     document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('hidden', t !== tab);
@@ -821,6 +944,7 @@ document.getElementById('tabBtnShopping').addEventListener('click', ()=>showTab(
 document.getElementById('tabBtnProfit').addEventListener('click', ()=>showTab('profit'));
 document.getElementById('tabBtnWatch').addEventListener('click', ()=>showTab('watch'));
 document.getElementById('tabBtnGlamour').addEventListener('click', ()=>showTab('glamour'));
+document.getElementById('tabBtnUnlockables').addEventListener('click', ()=>showTab('unlockables'));
 
 // --- Watchlist's own internal sub-tabs (Watching / Economy) — a smaller
 // version of the same pattern, scoped to just that one tab. ---
@@ -833,6 +957,20 @@ function showWatchSubTab(name){
 }
 document.getElementById('watchSubBtnList').addEventListener('click', ()=>showWatchSubTab('List'));
 document.getElementById('watchSubBtnEconomy').addEventListener('click', ()=>showWatchSubTab('Economy'));
+
+// --- Unlockables' own internal sub-tabs (Mount / Minion / Emote / Fashion) —
+// same pattern again, scoped to just that one tab. ---
+const UNLOCK_SUBTAB_IDS = ['Mount', 'Minion', 'Emote', 'Fashion'];
+function showUnlockSubTab(name){
+  UNLOCK_SUBTAB_IDS.forEach(t => {
+    document.getElementById('unlockSub' + t).classList.toggle('hidden', t !== name);
+    document.getElementById('unlockSubBtn' + t).classList.toggle('active', t === name);
+  });
+  unlockUI.hideError();
+}
+UNLOCK_SUBTAB_IDS.forEach(t => {
+  document.getElementById('unlockSubBtn' + t).addEventListener('click', ()=>showUnlockSubTab(t));
+});
 
 // --- Standalone Personal Stats page (covers stats from every tab, not just
 // the Watchlist) — swaps out the main tab content entirely while open. ---
@@ -880,6 +1018,7 @@ const STAGE_MESSAGES = {
   ingredients: ['Chasing down what these mats are even called...', 'Interrogating the ingredients one by one...', 'Reading tiny item labels...'],
   prices:      ['Storming the Market Board...', 'Haggling with retainers...', 'Counting gil (badly, with its paws)...', 'Checking every world\'s price tags...'],
   glamour:     ['Squinting at screenshots...', 'Matching pixels to actual items...', 'Cross-referencing every piece with the wiki...'],
+  unlock:      ['Flipping through the collection log...', 'Bribing a Moogle for details...', 'Digging through the Gold Saucer lost and found...'],
 };
 
 const FUNNY_ERROR_LINES = [
@@ -1001,6 +1140,14 @@ const glamourUI = createUI({
   errorCard:'glamourErrorCard', errorFunny:'glamourErrorFunny', errorTech:'glamourErrorTech', logDetails:'glamourLogDetails',
   copyErrorBtn:'glamourCopyErrorBtn', copyConfirm:'glamourCopyConfirm'
 });
+// Shared across all four Unlockables sub-tabs (Mount/Minion/Emote/Fashion) —
+// only one of them is ever being searched at a time, so one status/error/log
+// set is plenty and saves a lot of near-identical HTML.
+const unlockUI = createUI({
+  log:'unlockLog', friendlyStatus:'unlockFriendlyStatus', friendlyText:'unlockFriendlyText',
+  errorCard:'unlockErrorCard', errorFunny:'unlockErrorFunny', errorTech:'unlockErrorTech', logDetails:'unlockLogDetails',
+  copyErrorBtn:'unlockCopyErrorBtn', copyConfirm:'unlockCopyConfirm'
+});
 // Clear a tab's error card the instant its input changes — a stale error card
 // sitting there while you type a totally different item looks like a bug.
 document.getElementById('wikiUrl').addEventListener('input', ()=>{ craftUI.hideError(); clearSuggestions('craftSuggestions'); });
@@ -1008,6 +1155,9 @@ document.getElementById('lookupInput').addEventListener('input', ()=>{ lookupUI.
 document.getElementById('profitInput').addEventListener('input', ()=>{ profitUI.hideError(); clearSuggestions('profitSuggestions'); });
 document.getElementById('watchInput').addEventListener('input', ()=>{ watchUI.hideError(); clearSuggestions('watchSuggestions'); });
 document.getElementById('glamourInput').addEventListener('input', ()=>glamourUI.hideError());
+['Mount','Minion','Emote','Fashion'].forEach(t => {
+  document.getElementById('unlock' + t + 'Input').addEventListener('input', ()=>unlockUI.hideError());
+});
 
 async function fetchViaProxies(url, proxies, logFn, timeoutMs){
   // Race every route in parallel instead of one-at-a-time — a sequential chain of
@@ -2906,7 +3056,7 @@ function setWatchAlert(id, rawValue){
 // --- Slave's Report: lifetime personal-use counters, purely for fun — a
 // running tally of how much fetching you've put the slave through, not a
 // rigorous audit log. ---
-const STATS_DEFAULTS = { searches: 0, recipesChecked: 0, gilEvaluated: 0, basketItems: 0, watchlistAlerts: 0, lycaaCraftMinutes: 0, copyBasketClicks: 0 };
+const STATS_DEFAULTS = { searches: 0, recipesChecked: 0, gilEvaluated: 0, basketItems: 0, watchlistAlerts: 0, lycaaCraftMinutes: 0, copyBasketClicks: 0, moogleCatches: 0 };
 function loadStats(){
   try{ return Object.assign({}, STATS_DEFAULTS, JSON.parse(localStorage.getItem('lycaas_stats') || '{}')); }
   catch(e){ return Object.assign({}, STATS_DEFAULTS); }
@@ -2982,6 +3132,7 @@ function renderFunStats(){
       <div class="stat-cell"><div class="stat-num">${coffeeBreaks}</div><div class="stat-label">Coffee breaks earned (unpaid)</div></div>
       <div class="stat-cell"><div class="stat-num">${cursesAtUniversalis}</div><div class="stat-label">Curses muttered at Universalis</div></div>
       <div class="stat-cell"><div class="stat-num">${cartsPushed}</div><div class="stat-label">Handcarts pushed to your door</div></div>
+      <div class="stat-cell"><div class="stat-num">${s.moogleCatches || 0}</div><div class="stat-label">Moogles caught mid-flight</div></div>
     </div>
   `;
 }
@@ -3542,6 +3693,204 @@ document.getElementById('watchAutoRefreshToggleBtn').addEventListener('click', (
 renderWatchlist();
 renderSlaveReport();
 
+// --- Unlockables: mount/minion/emote/fashion-accessory lookup, powered by
+// FFXIV Collect's public API (non-commercial use, per their terms — this is a
+// free personal tool). Each type shares the same shape of API response, so one
+// generic search/render/detail pipeline handles all four instead of four
+// separate copies. ---
+const UNLOCKABLE_TYPES = {
+  Mount:   { api: 'mounts',   slug: 'mounts',   label: 'mount',             placeholder: 'Kirin' },
+  Minion:  { api: 'minions',  slug: 'minions',  label: 'minion',            placeholder: 'Wind-up' },
+  Emote:   { api: 'emotes',   slug: 'emotes',   label: 'emote',             placeholder: 'wave' },
+  Fashion: { api: 'fashions', slug: 'fashions', label: 'fashion accessory', placeholder: 'Shovel' },
+};
+// Remembers each type's last search results in memory so clicking "Back to
+// results" doesn't need a second network round-trip.
+const unlockLastResults = {};
+
+async function searchUnlockable(type){
+  const cfg = UNLOCKABLE_TYPES[type];
+  const inputEl = document.getElementById('unlock' + type + 'Input');
+  const query = inputEl.value.trim();
+  unlockUI.hideError();
+  if (!query){ alert('Type a ' + cfg.label + ' name first — e.g. "' + cfg.placeholder + '".'); return; }
+  const resultsEl = document.getElementById('unlock' + type + 'Results');
+  const btn = document.getElementById('unlock' + type + 'Btn');
+  btn.disabled = true;
+  unlockUI.clearLog();
+  unlockUI.setStage('unlock');
+  try{
+    const url = 'https://ffxivcollect.com/api/' + cfg.api + '?name_en_cont=' + encodeURIComponent(query) + '&limit=16';
+    const data = await fetchJson(url, unlockUI.log);
+    const results = (data && data.results) || [];
+    unlockLastResults[type] = results;
+    if (!results.length){
+      resultsEl.innerHTML = '<p class="recipe-meta" style="margin:0;">Nothing matched "' + query + '." Try a shorter or different piece of the name.</p>';
+      return;
+    }
+    resultsEl.innerHTML = renderUnlockableList(results);
+    wireUnlockableCards(type, results, resultsEl);
+    bumpStat('searches', 1);
+    unlockUI.log('Done.');
+  }catch(e){
+    unlockUI.showError(e);
+  }finally{
+    unlockUI.stopStatus();
+    btn.disabled = false;
+  }
+}
+
+function renderUnlockableList(results){
+  return '<div class="unlock-grid">' + results.map((r, idx) => `
+    <button class="unlock-card" type="button" data-idx="${idx}">
+      <img src="${r.icon || r.image}" alt="" loading="lazy">
+      <span>${r.name}</span>
+    </button>
+  `).join('') + '</div>';
+}
+
+function wireUnlockableCards(type, results, resultsEl){
+  resultsEl.querySelectorAll('.unlock-card').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const item = results[parseInt(btn.dataset.idx, 10)];
+      addRecent('lycaas_recent_unlock_' + type.toLowerCase(), { name: item.name, url: type + ':' + item.id, data: item });
+      renderRecent('lycaas_recent_unlock_' + type.toLowerCase(), 'unlock' + type + 'Recent', entry => showUnlockableDetail(type, entry.data));
+      showUnlockableDetail(type, item, resultsEl);
+    });
+  });
+}
+
+async function showUnlockableDetail(type, item, resultsEl){
+  const el = resultsEl || document.getElementById('unlock' + type + 'Results');
+  el.innerHTML = renderUnlockableDetail(type, item);
+  el.querySelector('.unlock-back-btn').addEventListener('click', ()=>{
+    const last = unlockLastResults[type];
+    if (last){ el.innerHTML = renderUnlockableList(last); wireUnlockableCards(type, last, el); }
+  });
+  if (item.tradeable && item.item_id){
+    const slotId = 'unlockPriceSlot-' + type + '-' + item.id;
+    const slot = document.getElementById(slotId);
+    if (slot){
+      slot.textContent = 'Checking the Market Board...';
+      try{
+        const worldFilter = getActiveWorldFilter();
+        const priceResult = await fetchPrices(FIXED_WORLD, [item.item_id], unlockUI.log);
+        const priceEntry = priceResult.items[item.item_id];
+        const priced = priceEntry ? priceForQuantity(priceEntry, 1, worldFilter, true) : null;
+        slot.innerHTML = priced
+          ? ('Its unlock item is going for <b>' + fmt(priced.unit) + 'g</b> on ' + priced.worldName + (priced.hq ? ' (HQ)' : '') +
+             ' right now — <a href="https://universalis.app/market/' + item.item_id + '" target="_blank" rel="noopener">view on Universalis →</a>')
+          : ('No current Market Board listings for its unlock item — <a href="https://universalis.app/market/' + item.item_id + '" target="_blank" rel="noopener">check Universalis →</a>');
+      }catch(e){
+        slot.textContent = 'Could not check the Market Board just now.';
+      }
+    }
+  }
+}
+
+function renderUnlockableDetail(type, item){
+  const cfg = UNLOCKABLE_TYPES[type];
+  const img = item.image || item.icon;
+  const metaBits = [];
+  if (item.patch) metaBits.push('Patch ' + item.patch);
+  if (item.owned) metaBits.push(item.owned + ' of players own this');
+  if (item.movement) metaBits.push(item.movement + (item.seats ? (' · ' + item.seats + ' seat' + (item.seats > 1 ? 's' : '')) : ''));
+  if (item.behavior && item.behavior.name) metaBits.push(item.behavior.name + ' minion');
+  if (item.category && item.category.name) metaBits.push(item.category.name + ' emote');
+  if (item.command) metaBits.push('Command: ' + item.command.split(',')[0].trim());
+  if (item.tradeable) metaBits.push('Marketboard-tradeable');
+
+  const sourcesHtml = (item.sources && item.sources.length)
+    ? item.sources.map(s => {
+        const url = (s.related_type && s.related_id)
+          ? ('https://ffxivcollect.com/database/' + String(s.related_type).toLowerCase() + '/' + s.related_id + '/link')
+          : null;
+        const text = (s.type ? (s.type + ': ') : '') + s.text;
+        return url
+          ? ('<span class="acq-tag"><a href="' + url + '" target="_blank" rel="noopener" style="color:inherit;">' + text + '</a></span>')
+          : ('<span class="acq-tag">' + text + '</span>');
+      }).join('')
+    : '<span class="acq-tag">Source unclear — check the page link below</span>';
+
+  const itemLinkHtml = item.item_id
+    ? ('<p class="recipe-meta" style="margin:6px 0 0;">Unlocked via: <a href="https://ffxivcollect.com/database/item/' + item.item_id + '/link" target="_blank" rel="noopener">item #' + item.item_id + '</a></p>')
+    : '';
+
+  const pageUrl = 'https://ffxivcollect.com/' + cfg.slug + '/' + item.id;
+  const description = item.description || item.enhanced_description || '';
+
+  return `
+    <div class="panel unlock-detail">
+      <button class="secondary unlock-back-btn" type="button" style="margin-bottom:10px;">← Back to results</button>
+      <div class="row" style="align-items:flex-start;">
+        <img src="${img}" alt="${item.name}" style="width:96px; height:96px; object-fit:contain; border:1px solid var(--border); border-radius:8px; flex-shrink:0;">
+        <div style="flex:1; min-width:0;">
+          <h3 style="margin:0 0 4px;">${item.name}</h3>
+          <p class="recipe-meta" style="margin:0 0 8px;">${metaBits.join(' · ')}</p>
+          ${description ? ('<p style="margin:0 0 8px;">' + description + '</p>') : ''}
+        </div>
+      </div>
+      <div class="acq-tags" style="margin-top:6px;">${sourcesHtml}</div>
+      ${itemLinkHtml}
+      <div id="unlockPriceSlot-${type}-${item.id}" class="recipe-meta" style="margin-top:8px;"></div>
+      <p class="recipe-meta" style="margin-top:12px;"><a href="${pageUrl}" target="_blank" rel="noopener">View on FFXIV Collect →</a> (full page, occasionally a video preview)</p>
+    </div>
+  `;
+}
+
+// --- Moogle easter egg: purely decorative, no gameplay purpose whatsoever.
+// Every so often (a random few minutes apart), a little moogle drifts across
+// the screen. Click it before it escapes for a completely useless reward. ---
+const MOOGLE_SVG = '<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" width="46" height="46">' +
+  '<ellipse cx="14" cy="28" rx="10" ry="6" fill="#f2ede0" stroke="#b8ab8a" stroke-width="1"/>' +
+  '<ellipse cx="46" cy="28" rx="10" ry="6" fill="#f2ede0" stroke="#b8ab8a" stroke-width="1"/>' +
+  '<circle cx="30" cy="34" r="16" fill="#faf6ec" stroke="#b8ab8a" stroke-width="1.2"/>' +
+  '<line x1="30" y1="18" x2="27" y2="8" stroke="#7a6b53" stroke-width="1.5"/>' +
+  '<circle cx="26" cy="7" r="4" fill="#c0392b"/>' +
+  '<circle cx="24" cy="33" r="2" fill="#3a2f22"/>' +
+  '<circle cx="36" cy="33" r="2" fill="#3a2f22"/>' +
+  '<path d="M27 39 Q30 42 33 39" fill="none" stroke="#3a2f22" stroke-width="1.3" stroke-linecap="round"/>' +
+  '</svg>';
+const MOOGLE_MESSAGES = [
+  "Kupo! You found me. Congratulations on wasting a perfectly good click on a floating marshmallow, kupo.",
+  "You caught me! There is no reward. There was never going to be a reward. Kupo.",
+  "Achievement unlocked: Clicked A Moogle For No Reason. It will not appear on your Lodestone, kupo.",
+  "Kupo kupo! You've now spent more effort catching me than most people spend reading patch notes.",
+  "Congratulations, you clicked a moogle instead of doing literally anything productive. Kupo.",
+  "You wasted your time clicking me, and honestly? Same energy as buying a mount you'll never use. Kupo.",
+];
+function spawnMoogle(){
+  if (document.getElementById('activeMoogleEgg')) return; // only one at a time
+  const egg = document.createElement('div');
+  egg.id = 'activeMoogleEgg';
+  egg.className = 'moogle-egg';
+  egg.innerHTML = MOOGLE_SVG;
+  egg.style.top = (8 + Math.random() * 55) + '%';
+  const duration = 7 + Math.random() * 5;
+  egg.style.animationDuration = duration + 's';
+  document.body.appendChild(egg);
+  const removeTimer = setTimeout(() => { if (egg.parentNode) egg.remove(); }, duration * 1000 + 150);
+  egg.addEventListener('click', () => {
+    clearTimeout(removeTimer);
+    egg.classList.add('caught');
+    bumpStat('moogleCatches', 1);
+    const msg = MOOGLE_MESSAGES[Math.floor(Math.random() * MOOGLE_MESSAGES.length)];
+    const bubble = document.createElement('div');
+    bubble.className = 'moogle-bubble';
+    bubble.textContent = msg;
+    const rect = egg.getBoundingClientRect();
+    bubble.style.top = Math.max(8, rect.top - 10) + 'px';
+    bubble.style.left = Math.min(Math.max(8, window.innerWidth - 250), rect.left) + 'px';
+    document.body.appendChild(bubble);
+    setTimeout(() => { if (egg.parentNode) egg.remove(); if (bubble.parentNode) bubble.remove(); }, 3800);
+  });
+}
+function scheduleMoogle(){
+  const delay = (90 + Math.random() * 150) * 1000; // roughly 1.5–4 minutes apart
+  setTimeout(() => { spawnMoogle(); scheduleMoogle(); }, delay);
+}
+scheduleMoogle();
+
 document.getElementById('glamourBtn').addEventListener('click', lookupGlamour);
 document.getElementById('glamourInput').addEventListener('keydown', e=>{ if(e.key==='Enter') lookupGlamour(); });
 renderRecent('lycaas_recent_glamour', 'recentGlamour', item => {
@@ -3557,6 +3906,12 @@ document.getElementById('glamourFavImportFile').addEventListener('change', (e)=>
   e.target.value = '';
 });
 renderGlamourFavorites();
+
+['Mount','Minion','Emote','Fashion'].forEach(t => {
+  document.getElementById('unlock' + t + 'Btn').addEventListener('click', ()=>searchUnlockable(t));
+  document.getElementById('unlock' + t + 'Input').addEventListener('keydown', e=>{ if (e.key === 'Enter') searchUnlockable(t); });
+  renderRecent('lycaas_recent_unlock_' + t.toLowerCase(), 'unlock' + t + 'Recent', entry => showUnlockableDetail(t, entry.data));
+});
 
 (function restoreMood(){
   const n = parseInt(sessionStorage.getItem('lycaas_search_count') || '0', 10);
