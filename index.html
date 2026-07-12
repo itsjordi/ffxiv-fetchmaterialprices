@@ -83,7 +83,10 @@
   .world-tag{font-size:.75rem; color:var(--dim); font-style:italic;}
   .total-row td{border-top:2px solid var(--accent-dim); border-bottom:none; font-weight:700; padding-top:14px;}
   .recipe-meta{color:var(--dim); font-size:.85rem; margin:6px 0 14px; font-style:italic;}
-  .footer-note{font-size:.75rem; color:var(--dim); line-height:1.5; margin-top:24px; text-align:center; font-style:italic;}
+  .footer-note{
+    font-size:.72rem; color:var(--dim); line-height:1.4; text-align:center; font-style:italic;
+    border-top:1px dashed var(--border); margin:8px 0 0; padding:8px 10px 2px;
+  }
   a{color:var(--accent);}
 
   details.panel summary{cursor:pointer; font-weight:700; color:var(--accent); list-style:none;}
@@ -124,11 +127,18 @@
   .brand-row svg{flex-shrink:0;}
   .brand-text{flex:1;}
   .brand-text h1{margin:0;}
-  #themeToggleBtn, #infoBtn{
+  #themeToggleBtn, #infoBtn, #worldSettingsBtn{
     background:var(--panel); border:1px solid var(--border); color:var(--ink);
     font-weight:400; padding:8px 14px; align-self:flex-start;
   }
-  #themeToggleBtn:hover, #infoBtn:hover{border-color:var(--accent-dim); color:var(--accent);}
+  #themeToggleBtn:hover, #infoBtn:hover, #worldSettingsBtn:hover{border-color:var(--accent-dim); color:var(--accent);}
+
+  .settings-popover{
+    position:fixed; z-index:9200; background:var(--paper); border:1px solid var(--border);
+    border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.25); padding:14px;
+    width:340px; max-width:calc(100vw - 32px);
+  }
+  .settings-popover.hidden{display:none;}
 
   /* --- Floating windows: every page is its own draggable, closable window,
      opened/closed from the launcher sidebar. Several can be open at once. --- */
@@ -423,8 +433,32 @@
       <h1>Lycaa's Slave</h1>
       <p class="sub" style="margin:0;">Fetches material prices, so you know what it'll cost to craft.</p>
     </div>
+    <button id="worldSettingsBtn" type="button" class="secondary" title="Set your home world (Light data center)">🌍 <span id="worldSettingsBtnLabel">Set world</span></button>
     <button id="infoBtn" type="button" class="secondary" title="What can this thing do?">ℹ️ Information</button>
     <button id="themeToggleBtn" type="button" title="Switch between light and dark paper">🌙 Dark</button>
+  </div>
+
+  <div id="worldSettingsPopover" class="settings-popover hidden">
+    <div class="row" style="align-items:flex-end; margin-bottom:0;">
+      <div class="field" style="max-width:200px;">
+        <label for="homeWorldSelect">Your world (Light)</label>
+        <select id="homeWorldSelect">
+          <option value="">— not set —</option>
+          <option value="Alpha">Alpha</option>
+          <option value="Lich">Lich</option>
+          <option value="Odin">Odin</option>
+          <option value="Phoenix">Phoenix</option>
+          <option value="Raiden">Raiden</option>
+          <option value="Shiva">Shiva</option>
+          <option value="Twintania">Twintania</option>
+          <option value="Zodiark">Zodiark</option>
+        </select>
+      </div>
+      <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding-bottom:9px;">
+        <input type="checkbox" id="homeWorldOnlyToggle">
+        <span class="recipe-meta" style="margin:0;">Only price what's on my world — no data-center travel</span>
+      </label>
+    </div>
   </div>
 
   <div class="window-launcher" id="windowLauncher">
@@ -442,6 +476,7 @@
     <button class="launcher-btn" type="button" data-preset="marketWatch" title="Watchlist + Item Lookup, side by side">📊 <span>Market Watch</span></button>
     <button class="launcher-btn" type="button" data-preset="collectorsCorner" title="Unlockables + Personal Stats, side by side">🐴 <span>Collector's Corner</span></button>
     <button class="launcher-btn launcher-reset-btn" type="button" id="windowResetBtn" title="Close everything and reset window positions">⊞ <span>Reset layout</span></button>
+    <p class="footer-note" id="footerNote">the slave fetches; the slave does not explain itself.</p>
   </div>
 
   <div id="infoModalBackdrop" class="info-modal-backdrop hidden">
@@ -493,7 +528,7 @@
         <button class="secondary info-open-btn" data-open-win="personalStats">Open →</button>
       </div>
 
-      <p class="recipe-meta" style="margin-bottom:0;">Also worth knowing: your home world and the basket bar sit pinned at the top no matter which windows you have open, and there's a dark mode toggle next to this Information button.</p>
+      <p class="recipe-meta" style="margin-bottom:0;">Also worth knowing: the 🌍 button next to this one sets your home world, the basket floats in the top-right corner, and there's a dark mode toggle right here too — all three stay out of the way of your windows.</p>
     </div>
   </div>
 
@@ -503,29 +538,6 @@
     A lot of browsers flatly refuse to let a local file talk to the internet, which means every
     lookup below may fail instantly no matter what — not the slave's fault, your browser's. Ask
     whoever gave you this to host it somewhere (GitHub Pages, etc.) instead of sending you the raw file.</p>
-  </div>
-
-  <div class="panel" id="worldSettings">
-    <div class="row" style="align-items:flex-end; margin-bottom:0;">
-      <div class="field" style="max-width:200px;">
-        <label for="homeWorldSelect">Your world (Light)</label>
-        <select id="homeWorldSelect">
-          <option value="">— not set —</option>
-          <option value="Alpha">Alpha</option>
-          <option value="Lich">Lich</option>
-          <option value="Odin">Odin</option>
-          <option value="Phoenix">Phoenix</option>
-          <option value="Raiden">Raiden</option>
-          <option value="Shiva">Shiva</option>
-          <option value="Twintania">Twintania</option>
-          <option value="Zodiark">Zodiark</option>
-        </select>
-      </div>
-      <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding-bottom:9px;">
-        <input type="checkbox" id="homeWorldOnlyToggle">
-        <span class="recipe-meta" style="margin:0;">Only price what's on my world — no data-center travel</span>
-      </label>
-    </div>
   </div>
 
   <div class="panel" id="basketBar">
@@ -982,8 +994,6 @@
       <pre id="unlockLog"></pre>
     </details>
   </div>
-
-  <p class="footer-note" id="footerNote">the slave fetches; the slave does not explain itself.</p>
   </div>
 
   <div id="personalStatsPage" class="tab-panel hidden">
@@ -1041,16 +1051,23 @@ function getActiveWorldFilter(){
   const s = loadWorldSettings();
   return (s.homeOnly && s.homeWorld) ? s.homeWorld : null;
 }
+function updateWorldSettingsBtnLabel(){
+  const s = loadWorldSettings();
+  const label = document.getElementById('worldSettingsBtnLabel');
+  if (label) label.textContent = s.homeWorld ? (s.homeWorld + (s.homeOnly ? ' only' : '')) : 'Set world';
+}
 (function initWorldSettings(){
   const s = loadWorldSettings();
   document.getElementById('homeWorldSelect').value = s.homeWorld;
   document.getElementById('homeWorldOnlyToggle').checked = s.homeOnly;
+  updateWorldSettingsBtnLabel();
 })();
 document.getElementById('homeWorldSelect').addEventListener('change', ()=>{
   const world = document.getElementById('homeWorldSelect').value;
   const onlyToggle = document.getElementById('homeWorldOnlyToggle');
   if (!world) onlyToggle.checked = false;
   saveWorldSettings(world, onlyToggle.checked);
+  updateWorldSettingsBtnLabel();
 });
 document.getElementById('homeWorldOnlyToggle').addEventListener('change', ()=>{
   const world = document.getElementById('homeWorldSelect').value;
@@ -1061,6 +1078,36 @@ document.getElementById('homeWorldOnlyToggle').addEventListener('change', ()=>{
     return;
   }
   saveWorldSettings(world, toggle.checked);
+  updateWorldSettingsBtnLabel();
+});
+
+// --- World settings popover: a small anchored dropdown instead of a panel
+// pinned in the page flow, so the whole canvas stays free for windows. ---
+function openWorldSettingsPopover(){
+  const btn = document.getElementById('worldSettingsBtn');
+  const pop = document.getElementById('worldSettingsPopover');
+  const rect = btn.getBoundingClientRect();
+  pop.classList.remove('hidden');
+  let left = rect.left;
+  left = Math.max(8, Math.min(left, window.innerWidth - 356));
+  pop.style.left = left + 'px';
+  pop.style.top = (rect.bottom + 8) + 'px';
+}
+function closeWorldSettingsPopover(){
+  document.getElementById('worldSettingsPopover').classList.add('hidden');
+}
+document.getElementById('worldSettingsBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  const pop = document.getElementById('worldSettingsPopover');
+  if (pop.classList.contains('hidden')) openWorldSettingsPopover(); else closeWorldSettingsPopover();
+});
+document.getElementById('worldSettingsPopover').addEventListener('click', (e)=>{ e.stopPropagation(); });
+document.addEventListener('click', (e)=>{
+  const pop = document.getElementById('worldSettingsPopover');
+  if (!pop.classList.contains('hidden') && e.target.id !== 'worldSettingsBtn') closeWorldSettingsPopover();
+});
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape' && !document.getElementById('worldSettingsPopover').classList.contains('hidden')) closeWorldSettingsPopover();
 });
 
 // --- Dark theme: same aged-paper look, just re-tinted for lamplight instead
