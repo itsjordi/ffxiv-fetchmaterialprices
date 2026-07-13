@@ -286,6 +286,8 @@
   }
   .fav-remove:hover{border-color:var(--bad); color:var(--bad);}
   #glamourFavoriteToggleBtn.active-fav{background:var(--accent); color:var(--paper); border-color:var(--accent);}
+  button.active-fav{background:var(--accent); color:var(--paper); border-color:var(--accent);}
+  .fav-type-tag{font-size:.68rem; opacity:.75; margin-right:2px;}
 
   .watch-controls{display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:6px;}
   .watch-alert-input{
@@ -379,6 +381,64 @@
     font-variant-numeric:tabular-nums; font-style:italic;
   }
   .unlock-detail img{background:var(--panel2);}
+  .triad-stat-grid{
+    display:grid; grid-template-columns:repeat(3, 32px); grid-template-rows:repeat(3, 32px);
+    gap:2px; margin:10px 0; justify-content:start;
+  }
+  .triad-stat{
+    display:flex; align-items:center; justify-content:center;
+    background:var(--panel); border:1px solid var(--border); border-radius:3px;
+    font-weight:700; color:var(--accent);
+  }
+  .task-list{display:flex; flex-direction:column; gap:4px;}
+  .task-row{
+    display:flex; align-items:center; gap:8px; padding:6px 8px;
+    background:var(--panel); border:1px solid var(--border); border-radius:4px; cursor:pointer;
+  }
+  .task-row span{flex:1;}
+  .task-row.task-done span{ text-decoration:line-through; color:var(--dim); }
+  .task-remove{
+    background:transparent; border:1px solid var(--border); color:var(--dim);
+    font-family:inherit; font-size:.7rem; padding:2px 7px; border-radius:10px; cursor:pointer; flex-shrink:0;
+  }
+  .task-remove:hover{border-color:var(--bad); color:var(--bad);}
+  .char-result-card{
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+    background:var(--panel); border:1px solid var(--border); border-radius:4px;
+    padding:8px 10px; color:var(--ink); margin-bottom:6px;
+  }
+  .char-result-card:hover{border-color:var(--accent-dim); color:var(--accent);}
+  .char-result-card img{width:32px; height:32px; border-radius:3px; object-fit:cover; flex-shrink:0; background:var(--panel2);}
+  .char-portrait{width:100%; max-width:280px; border:1px solid var(--border); border-radius:6px; display:block; background:var(--panel2);}
+  .palette-backdrop{
+    position:fixed; inset:0; background:rgba(20,15,8,.5); z-index:9800;
+    display:flex; align-items:flex-start; justify-content:center; padding:10vh 20px;
+  }
+  .palette-backdrop.hidden{display:none;}
+  .palette{
+    background:var(--paper); border:1px solid var(--border); border-radius:8px;
+    width:560px; max-width:100%; max-height:70vh; overflow:hidden;
+    box-shadow:0 20px 50px rgba(0,0,0,.45); display:flex; flex-direction:column;
+  }
+  #paletteInput{
+    width:100%; box-sizing:border-box; padding:14px 16px; font-size:1rem;
+    background:var(--paper); border:none; border-bottom:1px solid var(--border);
+    color:var(--ink); font-family:inherit;
+  }
+  #paletteInput:focus{outline:none;}
+  .palette-results{overflow-y:auto; max-height:calc(70vh - 54px); padding:6px;}
+  .palette-row{
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+    background:transparent; border:none; color:var(--ink); font-family:inherit;
+    padding:9px 10px; border-radius:5px; cursor:pointer; font-size:.9rem;
+  }
+  .palette-row .palette-tag{margin-left:auto; font-size:.7rem; color:var(--dim); font-style:italic; flex-shrink:0;}
+  .palette-row.active, .palette-row:hover{background:var(--panel2); color:var(--accent);}
+  .palette-section-label{
+    font-size:.68rem; text-transform:uppercase; letter-spacing:.5px; color:var(--dim);
+    padding:8px 10px 2px;
+  }
+  .palette-empty{padding:16px; color:var(--dim); font-style:italic; font-size:.85rem;}
 
   /* --- Moogle easter egg: rarely flies across the screen, purely for fun. --- */
   .moogle-egg{
@@ -478,6 +538,9 @@
     <button class="launcher-btn" type="button" data-win="watch">📊 <span>Watchlist</span></button>
     <button class="launcher-btn" type="button" data-win="unlockables">🐴 <span>Unlockables</span></button>
     <button class="launcher-btn" type="button" data-win="personalStats">📜 <span>Personal Stats</span></button>
+    <button class="launcher-btn" type="button" data-win="characterLook">🧑‍🎤 <span>Character Look</span></button>
+    <button class="launcher-btn" type="button" data-win="dailyTasks">✅ <span>Daily Tasks</span></button>
+    <button class="launcher-btn" type="button" data-win="todo">📝 <span>To-Do</span></button>
     <div class="launcher-divider">Presets</div>
     <button class="launcher-btn" type="button" data-preset="glamourFitting" title="Glamour + Craft Cost + Shopping List, arranged side by side">👗 <span>Glamour Fitting</span></button>
     <button class="launcher-btn" type="button" data-preset="craftingDesk" title="Craft Cost + Profit Calc + Shopping List, arranged side by side">📦 <span>Crafting Desk</span></button>
@@ -535,8 +598,30 @@
         <p style="margin:0 0 8px;">A tally of everything you've actually done here, plus a healthy amount of nonsense the slave made up about how far she's walked to the market board.</p>
         <button class="secondary info-open-btn" data-open-win="personalStats">Open →</button>
       </div>
+      <div class="panel info-feature-card">
+        <h3 style="margin:0 0 4px;">🧑‍🎤 Character Look</h3>
+        <p style="margin:0 0 8px;">Found someone with a glamour you loved? Search their name + world, see their official Lodestone portrait, and save them so you can find that look again later.</p>
+        <button class="secondary info-open-btn" data-open-win="characterLook">Open →</button>
+      </div>
+      <div class="panel info-feature-card">
+        <h3 style="margin:0 0 4px;">✅ Daily Tasks</h3>
+        <p style="margin:0 0 8px;">A recurring checklist — roulettes, beast tribes, Wondrous Tails, whatever you grind. Dailies uncheck themselves at the daily reset, weeklies at the weekly reset.</p>
+        <button class="secondary info-open-btn" data-open-win="dailyTasks">Open →</button>
+      </div>
+      <div class="panel info-feature-card">
+        <h3 style="margin:0 0 4px;">📝 To-Do</h3>
+        <p style="margin:0 0 8px;">Freeform goals that don't reset — "Eureka for the Anemos gear," "finish the Bozja resistance record," whatever. Add it, check it off when it's done.</p>
+        <button class="secondary info-open-btn" data-open-win="todo">Open →</button>
+      </div>
 
-      <p class="recipe-meta" style="margin-bottom:0;">Also worth knowing: the 🌍 button next to this one sets your home world, the basket floats in the top-right corner, and there's a dark mode toggle right here too — all three stay out of the way of your windows.</p>
+      <p class="recipe-meta" style="margin-bottom:0;">Also worth knowing: the 🌍 button next to this one sets your home world, the basket floats in the top-right corner, and there's a dark mode toggle right here too — all three stay out of the way of your windows. Press <b>Ctrl+K</b> (<b>⌘K</b> on Mac) anywhere to pull up a quick search that jumps straight to a window, a saved character, a favorite, or a to-do item.</p>
+    </div>
+  </div>
+
+  <div id="paletteBackdrop" class="palette-backdrop hidden">
+    <div class="palette" id="palette">
+      <input type="text" id="paletteInput" placeholder="Jump to a window, saved character, favorite, or task... (Esc to close)" autocomplete="off">
+      <div id="paletteResults" class="palette-results"></div>
     </div>
   </div>
 
@@ -914,7 +999,14 @@
       <button class="window-close-btn" type="button" data-win="unlockables" title="Close">✕</button>
     </div>
     <div class="panel">
-      <p class="recipe-meta" style="margin-top:0;">Look up mounts, minions, emotes, and fashion accessories — see what they look like and how to get them. Data via <a href="https://ffxivcollect.com/" target="_blank" rel="noopener">FFXIV Collect</a>.</p>
+      <p class="recipe-meta" style="margin-top:0;">Look up mounts, minions, emotes, fashion accessories, achievements, orchestrion rolls, and Triple Triad cards — see what they look like and how to get them. Data via <a href="https://ffxivcollect.com/" target="_blank" rel="noopener">FFXIV Collect</a>.</p>
+      <div id="unlockFavoritesList" class="recent-strip hidden"></div>
+      <div class="row">
+        <button id="unlockFavExportBtn" class="secondary">Export favorites</button>
+        <button id="unlockFavImportBtn" class="secondary">Import favorites</button>
+        <input type="file" id="unlockFavImportFile" accept="application/json,.json" class="hidden">
+        <span id="unlockFavImportConfirm" class="copy-confirm hidden">Imported.</span>
+      </div>
     </div>
 
     <div class="watch-subtabs">
@@ -922,6 +1014,9 @@
       <button class="watch-subtab-btn" id="unlockSubBtnMinion">🐣 Minion</button>
       <button class="watch-subtab-btn" id="unlockSubBtnEmote">💃 Emote</button>
       <button class="watch-subtab-btn" id="unlockSubBtnFashion">🎩 Fashion Accessory</button>
+      <button class="watch-subtab-btn" id="unlockSubBtnAchievement">🏆 Achievement</button>
+      <button class="watch-subtab-btn" id="unlockSubBtnOrchestrion">🎼 Orchestrion Roll</button>
+      <button class="watch-subtab-btn" id="unlockSubBtnTriad">🃏 Triad Card</button>
     </div>
 
     <div id="unlockSubMount">
@@ -980,6 +1075,48 @@
       <div id="unlockFashionResults"></div>
     </div>
 
+    <div id="unlockSubAchievement" class="hidden">
+      <div class="panel">
+        <div class="row">
+          <div class="field" style="flex:1;">
+            <label for="unlockAchievementInput">Achievement name</label>
+            <input type="text" id="unlockAchievementInput" placeholder="e.g. Legend">
+          </div>
+        </div>
+        <div class="row"><button id="unlockAchievementBtn">Search achievements</button></div>
+        <div id="unlockAchievementRecent" class="recent-strip hidden"></div>
+      </div>
+      <div id="unlockAchievementResults"></div>
+    </div>
+
+    <div id="unlockSubOrchestrion" class="hidden">
+      <div class="panel">
+        <div class="row">
+          <div class="field" style="flex:1;">
+            <label for="unlockOrchestrionInput">Orchestrion roll name</label>
+            <input type="text" id="unlockOrchestrionInput" placeholder="e.g. Answers">
+          </div>
+        </div>
+        <div class="row"><button id="unlockOrchestrionBtn">Search orchestrion rolls</button></div>
+        <div id="unlockOrchestrionRecent" class="recent-strip hidden"></div>
+      </div>
+      <div id="unlockOrchestrionResults"></div>
+    </div>
+
+    <div id="unlockSubTriad" class="hidden">
+      <div class="panel">
+        <div class="row">
+          <div class="field" style="flex:1;">
+            <label for="unlockTriadInput">Triple Triad card name</label>
+            <input type="text" id="unlockTriadInput" placeholder="e.g. Coeurl">
+          </div>
+        </div>
+        <div class="row"><button id="unlockTriadBtn">Search Triad cards</button></div>
+        <div id="unlockTriadRecent" class="recent-strip hidden"></div>
+      </div>
+      <div id="unlockTriadResults"></div>
+    </div>
+
     <div id="unlockFriendlyStatus" class="friendly-status hidden">
       <span class="spinner-emoji">🪙</span>
       <span id="unlockFriendlyText">Thinking...</span>
@@ -1001,6 +1138,110 @@
       <summary>Technical log (for the curious, or for Lycaa)</summary>
       <pre id="unlockLog"></pre>
     </details>
+  </div>
+
+  <div id="tabCharacterLook" class="tab-panel hidden">
+    <div class="window-titlebar" data-win="characterLook">
+      <span class="window-title">🧑‍🎤 Character Look</span>
+      <button class="window-close-btn" type="button" data-win="characterLook" title="Close">✕</button>
+    </div>
+    <div class="panel">
+      <p class="recipe-meta" style="margin-top:0;">Search a character by name + world to see their official Lodestone portrait and link straight to their profile. There's no public way to pull an itemized "here's every piece they're wearing" list right now — Square Enix has locked that data down — but the portrait shows you exactly what the look is.</p>
+      <div class="row">
+        <div class="field" style="flex:1;">
+          <label for="charLookNameInput">Character name</label>
+          <input type="text" id="charLookNameInput" placeholder="e.g. Y'shtola Rhul">
+        </div>
+        <div class="field" style="max-width:160px;">
+          <label for="charLookWorldInput">World</label>
+          <input type="text" id="charLookWorldInput" placeholder="e.g. Excalibur">
+        </div>
+      </div>
+      <div class="row"><button id="charLookBtn">Search characters</button></div>
+      <div id="charLookRecent" class="recent-strip hidden"></div>
+    </div>
+
+    <div class="panel">
+      <p class="recipe-meta" style="margin-top:0;">Saved characters — come back to their look anytime.</p>
+      <div id="charLookSavedList" class="recent-strip hidden"></div>
+      <div class="row">
+        <button id="charLookSavedExportBtn" class="secondary">Export saved</button>
+        <button id="charLookSavedImportBtn" class="secondary">Import saved</button>
+        <input type="file" id="charLookSavedImportFile" accept="application/json,.json" class="hidden">
+        <span id="charLookSavedImportConfirm" class="copy-confirm hidden">Imported.</span>
+      </div>
+    </div>
+
+    <div id="charLookFriendlyStatus" class="friendly-status hidden">
+      <span class="spinner-emoji">🪙</span>
+      <span id="charLookFriendlyText">Thinking...</span>
+    </div>
+
+    <div id="charLookErrorCard" class="panel error-card hidden">
+      <p class="funny-line" id="charLookErrorFunny"></p>
+      <div class="row">
+        <button id="charLookCopyErrorBtn" class="secondary">Copy error for Lycaa</button>
+        <span id="charLookCopyConfirm" class="copy-confirm hidden">Copied. Go forth.</span>
+      </div>
+      <details>
+        <summary style="cursor:pointer; color:var(--dim); font-style:italic; font-size:.8rem;">Technical details</summary>
+        <pre id="charLookErrorTech" style="white-space:pre-wrap; font-size:.78rem; color:var(--dim); margin-top:8px;"></pre>
+      </details>
+    </div>
+
+    <details id="charLookLogDetails" class="tech-log-details">
+      <summary>Technical log (for the curious, or for Lycaa)</summary>
+      <pre id="charLookLog"></pre>
+    </details>
+
+    <div id="charLookResults"></div>
+  </div>
+
+  <div id="tabDailyTasks" class="tab-panel hidden">
+    <div class="window-titlebar" data-win="dailyTasks">
+      <span class="window-title">✅ Daily Tasks</span>
+      <button class="window-close-btn" type="button" data-win="dailyTasks" title="Close">✕</button>
+    </div>
+    <div class="panel">
+      <p class="recipe-meta" style="margin-top:0;">Dailies uncheck themselves after the daily reset (15:00 UTC); weeklies uncheck after the weekly reset (Tuesday, same time). Add whatever you actually grind.</p>
+      <div class="row">
+        <div class="field" style="flex:1;">
+          <label for="dailyTaskInput">New task</label>
+          <input type="text" id="dailyTaskInput" placeholder="e.g. Duty Roulette: Alliance Raid">
+        </div>
+        <div class="field" style="max-width:120px;">
+          <label for="dailyTaskType">Repeats</label>
+          <select id="dailyTaskType">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+          </select>
+        </div>
+      </div>
+      <div class="row"><button id="dailyTaskAddBtn">Add task</button></div>
+    </div>
+    <div class="panel" id="dailyTasksBody"></div>
+  </div>
+
+  <div id="tabTodo" class="tab-panel hidden">
+    <div class="window-titlebar" data-win="todo">
+      <span class="window-title">📝 To-Do</span>
+      <button class="window-close-btn" type="button" data-win="todo" title="Close">✕</button>
+    </div>
+    <div class="panel">
+      <p class="recipe-meta" style="margin-top:0;">Freeform goals — gear to farm, zones to clear, whatever. No resets, just check things off as you go.</p>
+      <div class="row">
+        <div class="field" style="flex:1;">
+          <label for="todoInput">New goal</label>
+          <input type="text" id="todoInput" placeholder="e.g. Eureka: farm Anemos weapon">
+        </div>
+      </div>
+      <div class="row">
+        <button id="todoAddBtn">Add to list</button>
+        <button id="todoClearDoneBtn" class="secondary">Clear completed</button>
+        <span class="recipe-meta" id="todoCounter" style="margin:0 0 0 auto;"></span>
+      </div>
+    </div>
+    <div class="panel" id="todoListBody"></div>
   </div>
   </div>
 
@@ -1145,7 +1386,7 @@ document.getElementById('themeToggleBtn').addEventListener('click', ()=>{
 // open at once; the left-side launcher sidebar opens/focuses them, and each
 // window's own titlebar drags it around or closes it. On narrow screens
 // (<900px) windows fall back to plain stacked full-width panels instead. ---
-const WINDOW_IDS = ['craft', 'lookup', 'shopping', 'profit', 'watch', 'glamour', 'unlockables', 'personalStats'];
+const WINDOW_IDS = ['craft', 'lookup', 'shopping', 'profit', 'watch', 'glamour', 'unlockables', 'personalStats', 'characterLook', 'dailyTasks', 'todo'];
 function windowElId(id){
   return id === 'personalStats' ? 'personalStatsPage' : ('tab' + id.charAt(0).toUpperCase() + id.slice(1));
 }
@@ -1436,7 +1677,7 @@ document.getElementById('watchSubBtnEconomy').addEventListener('click', ()=>show
 
 // --- Unlockables' own internal sub-tabs (Mount / Minion / Emote / Fashion) —
 // same pattern again, scoped to just that one tab. ---
-const UNLOCK_SUBTAB_IDS = ['Mount', 'Minion', 'Emote', 'Fashion'];
+const UNLOCK_SUBTAB_IDS = ['Mount', 'Minion', 'Emote', 'Fashion', 'Achievement', 'Orchestrion', 'Triad'];
 function showUnlockSubTab(name){
   UNLOCK_SUBTAB_IDS.forEach(t => {
     document.getElementById('unlockSub' + t).classList.toggle('hidden', t !== name);
@@ -1477,6 +1718,7 @@ const STAGE_MESSAGES = {
   prices:      ['Storming the Market Board...', 'Haggling with retainers...', 'Counting gil (badly, with its paws)...', 'Checking every world\'s price tags...'],
   glamour:     ['Squinting at screenshots...', 'Matching pixels to actual items...', 'Cross-referencing every piece with the wiki...'],
   unlock:      ['Flipping through the collection log...', 'Bribing a Moogle for details...', 'Digging through the Gold Saucer lost and found...'],
+  charlook:    ['Squinting at the Lodestone...', 'Asking around Limsa for that name...', 'Politely stalking a total stranger...'],
 };
 
 const FUNNY_ERROR_LINES = [
@@ -1606,6 +1848,11 @@ const unlockUI = createUI({
   errorCard:'unlockErrorCard', errorFunny:'unlockErrorFunny', errorTech:'unlockErrorTech', logDetails:'unlockLogDetails',
   copyErrorBtn:'unlockCopyErrorBtn', copyConfirm:'unlockCopyConfirm'
 });
+const charLookUI = createUI({
+  log:'charLookLog', friendlyStatus:'charLookFriendlyStatus', friendlyText:'charLookFriendlyText',
+  errorCard:'charLookErrorCard', errorFunny:'charLookErrorFunny', errorTech:'charLookErrorTech', logDetails:'charLookLogDetails',
+  copyErrorBtn:'charLookCopyErrorBtn', copyConfirm:'charLookCopyConfirm'
+});
 // Clear a tab's error card the instant its input changes — a stale error card
 // sitting there while you type a totally different item looks like a bug.
 document.getElementById('wikiUrl').addEventListener('input', ()=>{ craftUI.hideError(); clearSuggestions('craftSuggestions'); });
@@ -1613,9 +1860,11 @@ document.getElementById('lookupInput').addEventListener('input', ()=>{ lookupUI.
 document.getElementById('profitInput').addEventListener('input', ()=>{ profitUI.hideError(); clearSuggestions('profitSuggestions'); });
 document.getElementById('watchInput').addEventListener('input', ()=>{ watchUI.hideError(); clearSuggestions('watchSuggestions'); });
 document.getElementById('glamourInput').addEventListener('input', ()=>glamourUI.hideError());
-['Mount','Minion','Emote','Fashion'].forEach(t => {
+UNLOCK_SUBTAB_IDS.forEach(t => {
   document.getElementById('unlock' + t + 'Input').addEventListener('input', ()=>unlockUI.hideError());
 });
+document.getElementById('charLookNameInput').addEventListener('input', ()=>charLookUI.hideError());
+document.getElementById('charLookWorldInput').addEventListener('input', ()=>charLookUI.hideError());
 
 async function fetchViaProxies(url, proxies, logFn, timeoutMs){
   // Race every route in parallel instead of one-at-a-time — a sequential chain of
@@ -2978,6 +3227,115 @@ function importGlamourFavoritesFile(file){
   reader.readAsText(file);
 }
 
+// --- Unlockables favorites: same pattern as Glamour favorites above, but keyed
+// by "Type:id" since a favorite here can be a Mount, Minion, Emote, Fashion
+// accessory, Achievement, Orchestrion Roll, or Triad card — one shared list
+// spanning all seven, shown right at the top of the Unlockables tab. ---
+function loadUnlockFavorites(){
+  try{ return JSON.parse(localStorage.getItem('lycaas_unlock_favorites') || '[]'); }
+  catch(e){ return []; }
+}
+function saveUnlockFavorites(list){
+  localStorage.setItem('lycaas_unlock_favorites', JSON.stringify(list));
+}
+function unlockFavKey(type, id){ return type + ':' + String(id); }
+function isUnlockFavorited(type, id){
+  const key = unlockFavKey(type, id);
+  return loadUnlockFavorites().some(f => f.key === key);
+}
+function toggleUnlockFavorite(type, item){
+  const key = unlockFavKey(type, item.id);
+  const list = loadUnlockFavorites();
+  const idx = list.findIndex(f => f.key === key);
+  if (idx === -1){
+    list.unshift({ key, type, id: item.id, name: item.name, icon: item.icon || null, savedAt: new Date().toISOString() });
+  } else {
+    list.splice(idx, 1);
+  }
+  saveUnlockFavorites(list);
+  renderUnlockFavorites();
+  updateUnlockFavoriteBtn(type, item.id);
+}
+function removeUnlockFavorite(type, id){
+  const key = unlockFavKey(type, id);
+  const list = loadUnlockFavorites().filter(f => f.key !== key);
+  saveUnlockFavorites(list);
+  renderUnlockFavorites();
+  updateUnlockFavoriteBtn(type, id);
+}
+function renderUnlockFavorites(){
+  const list = loadUnlockFavorites();
+  const el = document.getElementById('unlockFavoritesList');
+  if (!list.length){ el.innerHTML = ''; el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  el.innerHTML = '<span class="recent-label">Favorites:</span> ' +
+    list.map((item, idx) => (
+      '<span class="fav-chip-wrap">'
+      + '<button class="recent-chip" data-fav-idx="' + idx + '">'
+      + (item.icon ? ('<img src="' + item.icon + '" alt="" class="fav-thumb">') : '')
+      + '<span class="fav-type-tag">' + (UNLOCKABLE_TYPE_ICONS[item.type] || '') + '</span>' + item.name + '</button>'
+      + '<button class="fav-remove" data-fav-remove-idx="' + idx + '" title="Remove favorite">✕</button>'
+      + '</span>'
+    )).join('');
+  el.querySelectorAll('[data-fav-idx]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const item = list[parseInt(btn.dataset.favIdx, 10)];
+      showUnlockSubTab(item.type);
+      showUnlockableDetail(item.type, { id: item.id, name: item.name, icon: item.icon, image: item.icon });
+    });
+  });
+  el.querySelectorAll('[data-fav-remove-idx]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const item = list[parseInt(btn.dataset.favRemoveIdx, 10)];
+      removeUnlockFavorite(item.type, item.id);
+    });
+  });
+}
+function updateUnlockFavoriteBtn(type, id){
+  const btn = document.getElementById('unlockFavoriteToggleBtn');
+  if (!btn || btn.dataset.type !== type || String(btn.dataset.id) !== String(id)) return;
+  const favorited = isUnlockFavorited(type, id);
+  btn.textContent = favorited ? '★ Favorited' : '☆ Favorite this';
+  btn.classList.toggle('active-fav', favorited);
+}
+function exportUnlockFavorites(){
+  const list = loadUnlockFavorites();
+  if (!list.length){ alert('No Unlockables favorites yet — nothing to export.'); return; }
+  const payload = { exportedFrom: 'Lycaa\'s Slave', exportedAt: new Date().toISOString(), unlockFavorites: list };
+  downloadTextFile('lycaas-unlockables-favorites.json', JSON.stringify(payload, null, 2), 'application/json');
+}
+function importUnlockFavoritesFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      const incoming = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.unlockFavorites) ? parsed.unlockFavorites : null);
+      if (!incoming) throw new Error('not a recognizable Unlockables favorites file');
+      const current = loadUnlockFavorites();
+      const currentKeys = new Set(current.map(f => f.key));
+      let added = 0;
+      incoming.forEach(f => {
+        if (!f || !f.type || f.id === undefined || f.id === null || !f.name) return;
+        const key = unlockFavKey(f.type, f.id);
+        if (currentKeys.has(key)) return;
+        current.push({ key, type: f.type, id: f.id, name: f.name, icon: f.icon || null, savedAt: f.savedAt || new Date().toISOString() });
+        currentKeys.add(key);
+        added++;
+      });
+      saveUnlockFavorites(current);
+      renderUnlockFavorites();
+      const c = document.getElementById('unlockFavImportConfirm');
+      c.textContent = added ? ('Imported ' + added + ' favorite(s).') : 'Nothing new to import — already had all of those.';
+      c.classList.remove('hidden');
+      setTimeout(()=>c.classList.add('hidden'), 3500);
+    }catch(e){
+      alert('That doesn\'t look like an Unlockables favorites export file (' + e.message + ').');
+    }
+  };
+  reader.readAsText(file);
+}
+
 // --- Basket: a running list of "please craft me this" requests, kept in
 // localStorage so it survives reloads, meant to be copied and sent to Lycaa. ---
 async function copyText(text){
@@ -4157,11 +4515,16 @@ renderSlaveReport();
 // generic search/render/detail pipeline handles all four instead of four
 // separate copies. ---
 const UNLOCKABLE_TYPES = {
-  Mount:   { api: 'mounts',   slug: 'mounts',   label: 'mount',             placeholder: 'Kirin' },
-  Minion:  { api: 'minions',  slug: 'minions',  label: 'minion',            placeholder: 'Wind-up' },
-  Emote:   { api: 'emotes',   slug: 'emotes',   label: 'emote',             placeholder: 'wave' },
-  Fashion: { api: 'fashions', slug: 'fashions', label: 'fashion accessory', placeholder: 'Shovel' },
+  Mount:       { api: 'mounts',       slug: 'mounts',       label: 'mount',                placeholder: 'Kirin' },
+  Minion:      { api: 'minions',      slug: 'minions',      label: 'minion',               placeholder: 'Wind-up' },
+  Emote:       { api: 'emotes',       slug: 'emotes',       label: 'emote',                placeholder: 'wave' },
+  Fashion:     { api: 'fashions',     slug: 'fashions',     label: 'fashion accessory',     placeholder: 'Shovel' },
+  Achievement: { api: 'achievements', slug: 'achievements', label: 'achievement',           placeholder: 'Legend' },
+  Orchestrion: { api: 'orchestrions', slug: 'orchestrions', label: 'orchestrion roll',      placeholder: 'Answers' },
+  Triad:       { api: 'triad/cards',  slug: 'triad/cards',  label: 'Triple Triad card',     placeholder: 'Coeurl' },
 };
+// The Unlockables emoji used everywhere a type needs a little icon tag (Favorites strip, etc).
+const UNLOCKABLE_TYPE_ICONS = { Mount:'🐴', Minion:'🐣', Emote:'💃', Fashion:'🎩', Achievement:'🏆', Orchestrion:'🎼', Triad:'🃏' };
 // Remembers each type's last search results in memory so clicking "Back to
 // results" doesn't need a second network round-trip.
 const unlockLastResults = {};
@@ -4255,6 +4618,12 @@ async function showUnlockableDetail(type, item, resultsEl){
       loadUnlockablePrices(last, el);
     }
   });
+  const favBtn = el.querySelector('.unlock-fav-toggle-btn');
+  if (favBtn){
+    favBtn.addEventListener('click', ()=>{
+      toggleUnlockFavorite(type, { id: favBtn.dataset.id, name: favBtn.dataset.name, icon: favBtn.dataset.icon || null });
+    });
+  }
   if (item.tradeable && item.item_id){
     const slotId = 'unlockPriceSlot-' + type + '-' + item.id;
     const slot = document.getElementById(slotId);
@@ -4287,6 +4656,18 @@ function renderUnlockableDetail(type, item){
   if (item.category && item.category.name) metaBits.push(item.category.name + ' emote');
   if (item.command) metaBits.push('Command: ' + item.command.split(',')[0].trim());
   if (item.tradeable) metaBits.push('Marketboard-tradeable');
+  if (item.points) metaBits.push(item.points + ' achievement pts');
+  if (item.reward && item.reward.title && item.reward.title.name) metaBits.push('Title: ' + item.reward.title.name);
+  if (type === 'Triad' && item.stars) metaBits.push(item.stars + '★ card');
+  if (item.type && item.type.name) metaBits.push(item.type.name);
+
+  const triadStatsHtml = (type === 'Triad' && item.stats && item.stats.numeric) ? `
+    <div class="triad-stat-grid">
+      <span></span><span class="triad-stat">${item.stats.numeric.top}</span><span></span>
+      <span class="triad-stat">${item.stats.numeric.left}</span><span></span><span class="triad-stat">${item.stats.numeric.right}</span>
+      <span></span><span class="triad-stat">${item.stats.numeric.bottom}</span><span></span>
+    </div>
+  ` : '';
 
   const sourcesHtml = (item.sources && item.sources.length)
     ? item.sources.map(s => {
@@ -4316,8 +4697,14 @@ function renderUnlockableDetail(type, item){
           <h3 style="margin:0 0 4px;">${item.name}</h3>
           <p class="recipe-meta" style="margin:0 0 8px;">${metaBits.join(' · ')}</p>
           ${description ? ('<p style="margin:0 0 8px;">' + description + '</p>') : ''}
+          <button class="secondary unlock-fav-toggle-btn" type="button" id="unlockFavoriteToggleBtn"
+            data-type="${type}" data-id="${item.id}"
+            data-name="${String(item.name).replace(/"/g, '&quot;')}" data-icon="${(item.icon || item.image || '').replace(/"/g, '&quot;')}">
+            ${isUnlockFavorited(type, item.id) ? '★ Favorited' : '☆ Favorite this'}
+          </button>
         </div>
       </div>
+      ${triadStatsHtml}
       <div class="acq-tags" style="margin-top:6px;">${sourcesHtml}</div>
       ${itemLinkHtml}
       <div id="unlockPriceSlot-${type}-${item.id}" class="recipe-meta" style="margin-top:8px;"></div>
@@ -4379,6 +4766,648 @@ function scheduleMoogle(){
 }
 scheduleMoogle();
 
+// --- Character Look: search a real FFXIV character by name + world via the
+// official Lodestone (no login, no API key — same public search page anyone
+// can visit), show their current portrait/screenshot (which visually shows
+// whatever they're wearing), and let you save them to come back to later.
+//
+// There's no working public API left that hands back an itemized "here's
+// every gear slot" breakdown for an arbitrary player (both FFXIV Collect's and
+// XIVAPI's character-parsing endpoints returned empty during testing — almost
+// certainly a casualty of Square Enix cracking down on Lodestone scraping).
+// So this sticks to what's reliably scrapeable: the search results list and
+// the profile page's own portrait image, always pinned to the NA/Light region
+// since that's what the rest of this tool assumes.
+//
+// The HTML comes back through whichever CORS proxy wins the race in
+// fetchHtml() — sometimes raw HTML, sometimes a markdown-flavored reader
+// (jina). Both extractors below are written to degrade gracefully (return
+// nothing rather than throw) if the shape doesn't match, exactly like the
+// existing Glamour/wiki scrapers.
+function extractLodestoneSearchResults(html){
+  const results = [];
+  const seen = new Set();
+  // Works against raw HTML: grabs any internal link straight to a character
+  // profile and whatever text/image sits inside it, tag-agnostic so it
+  // survives Lodestone markup tweaks.
+  const anchorRe = /<a\s+[^>]*href="(?:https?:\/\/[a-z]+\.finalfantasyxiv\.com)?\/lodestone\/character\/(\d+)\/?"[^>]*>([\s\S]*?)<\/a>/gi;
+  let m;
+  while ((m = anchorRe.exec(html))){
+    const id = m[1];
+    if (seen.has(id)) continue;
+    const inner = m[2];
+    const imgMatch = inner.match(/<img[^>]+src="([^"]+)"/);
+    const text = decodeHtmlEntities(inner.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+    if (!text) continue; // an avatar-only link with no readable text isn't useful as a result row
+    seen.add(id);
+    results.push({ id, label: cleanCharacterLabel(text), avatar: imgMatch ? imgMatch[1] : null });
+  }
+  if (results.length) return results;
+  // Fallback: works against jina's markdown-reader output, which renders each
+  // result as "[Name NameWorld [DC] - Level - Lang](.../character/ID/)" — the
+  // display name shows up twice back-to-back, so a backreference against the
+  // captured link text finds the exact repeated substring instead of guessing
+  // where the name ends and the world begins.
+  // Greedy (not [^\]]+) on purpose: the label text itself often contains a
+  // literal "[DC]" bracket (e.g. "...Excalibur [Primal] - 59 - EN"), so a
+  // restrictive character class would stop at that inner "]" instead of the
+  // real closing bracket right before "(https://...)".
+  const linkRe = /\[(.+)\]\(https:\/\/[a-z]+\.finalfantasyxiv\.com\/lodestone\/character\/(\d+)\/\)/g;
+  while ((m = linkRe.exec(html))){
+    const id = m[2];
+    if (seen.has(id)) continue;
+    const raw = m[1];
+    const dupe = raw.match(/^(.+?) \1(.*)$/);
+    let label;
+    if (dupe){
+      label = cleanCharacterLabel(dupe[1] + ' ' + dupe[2]);
+    } else {
+      label = cleanCharacterLabel(raw);
+    }
+    if (!label) continue;
+    seen.add(id);
+    results.push({ id, label, avatar: null });
+  }
+  return results;
+}
+// Trims the trailing " - LEVEL - LANG" bits Lodestone always appends and
+// tidies whitespace — best-effort cosmetic cleanup, never blocks a result.
+function cleanCharacterLabel(text){
+  return text.replace(/\s*-\s*\d+\s*-\s*[A-Z]{2}\s*$/, '').replace(/\s*-\s*-\s*[A-Z]{2}\s*$/, '').replace(/\s+/g, ' ').trim();
+}
+// The portrait/screenshot URL is a plain substring match regardless of
+// surrounding markup — img2.finalfantasyxiv.com file hashes ending "fc0"
+// (cropped bust portrait) or "fl0" (full lightbox screenshot), same hash
+// prefix either way. Prefers the larger "fl0" variant when both are present.
+function extractLodestonePortrait(html){
+  const matches = html.match(/https:\/\/img2\.finalfantasyxiv\.com\/f\/[a-f0-9]+_[a-f0-9]+f[cl]0\.jpg(?:\?\d+)?/g);
+  if (!matches || !matches.length) return null;
+  const large = matches.find(u => /fl0\.jpg/.test(u));
+  return large || matches[0];
+}
+// Lodestone's own /mount/ and /minion/ collection pages print a plain
+// "Total: N" right under the heading — that survives both raw HTML and
+// markdown-reader conversion since it's just visible text, not something
+// buried in an attribute. This is as far as "Collection Checker" can go
+// right now: a real owned/needed badge on every single Unlockables card
+// would need matching each card to this player's specific icons, and there's
+// no shared id between Lodestone's own icon-hash CDN and FFXIV Collect's
+// catalog to make that match reliably — so this reports the honest total
+// instead of guessing item-by-item.
+function extractLodestoneCollectionTotal(html){
+  const m = html.match(/Total:\s*(\d+)/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+async function searchCharacters(){
+  const name = document.getElementById('charLookNameInput').value.trim();
+  const world = document.getElementById('charLookWorldInput').value.trim();
+  charLookUI.hideError();
+  if (!name){ alert('Type a character name first.'); return; }
+  const btn = document.getElementById('charLookBtn');
+  const resultsEl = document.getElementById('charLookResults');
+  btn.disabled = true;
+  charLookUI.clearLog();
+  charLookUI.setStage('charlook');
+  try{
+    let url = 'https://na.finalfantasyxiv.com/lodestone/character/?q=' + encodeURIComponent(name);
+    if (world) url += '&worldname=' + encodeURIComponent(world);
+    const html = await fetchHtml(url, charLookUI.log);
+    const results = extractLodestoneSearchResults(html);
+    charLookLastResults = results;
+    if (!results.length){
+      resultsEl.innerHTML = '<p class="recipe-meta" style="margin:0;">No one matched that name' + (world ? (' on ' + world) : '') + '. Double-check the spelling — Lodestone search is picky about apostrophes and capitalization.</p>';
+      return;
+    }
+    resultsEl.innerHTML = '<div class="panel">' + results.map((r, idx) => `
+      <button class="char-result-card" type="button" data-idx="${idx}">
+        ${r.avatar ? ('<img src="' + r.avatar + '" alt="">') : ''}
+        <span>${r.label}</span>
+      </button>
+    `).join('') + '</div>';
+    resultsEl.querySelectorAll('.char-result-card').forEach(cardBtn => {
+      cardBtn.addEventListener('click', ()=>{
+        const item = results[parseInt(cardBtn.dataset.idx, 10)];
+        addRecent('lycaas_recent_charlook', { name: item.label, url: 'char:' + item.id, data: item });
+        renderRecent('lycaas_recent_charlook', 'charLookRecent', entry => showCharacterDetail(entry.data));
+        showCharacterDetail(item);
+      });
+    });
+    bumpStat('searches', 1);
+    charLookUI.log('Done.');
+  }catch(e){
+    charLookUI.showError(e);
+  }finally{
+    charLookUI.stopStatus();
+    btn.disabled = false;
+  }
+}
+let charLookLastResults = [];
+
+async function showCharacterDetail(item){
+  const resultsEl = document.getElementById('charLookResults');
+  resultsEl.innerHTML = `
+    <div class="panel unlock-detail">
+      <button class="secondary charlook-back-btn" type="button" style="margin-bottom:10px;">← Back to results</button>
+      <h3 style="margin:0 0 8px;">${item.label}</h3>
+      <div id="charLookPortraitSlot">Fetching their profile...</div>
+      <p class="recipe-meta" style="margin-top:10px;">
+        <a href="https://na.finalfantasyxiv.com/lodestone/character/${item.id}/" target="_blank" rel="noopener">View full profile on Lodestone →</a>
+      </p>
+      <div id="charLookCollectionSlot" class="recipe-meta"></div>
+      <button class="secondary charlook-save-btn" type="button" id="charLookSaveToggleBtn" data-id="${item.id}"
+        data-label="${String(item.label).replace(/"/g, '&quot;')}">
+        ${isCharacterSaved(item.id) ? '★ Saved' : '☆ Save this character'}
+      </button>
+    </div>
+  `;
+  resultsEl.querySelector('.charlook-back-btn').addEventListener('click', ()=>{
+    if (charLookLastResults.length){
+      resultsEl.innerHTML = '<div class="panel">' + charLookLastResults.map((r, idx) => `
+        <button class="char-result-card" type="button" data-idx="${idx}">
+          ${r.avatar ? ('<img src="' + r.avatar + '" alt="">') : ''}
+          <span>${r.label}</span>
+        </button>
+      `).join('') + '</div>';
+      resultsEl.querySelectorAll('.char-result-card').forEach(cardBtn => {
+        cardBtn.addEventListener('click', ()=>{
+          const clicked = charLookLastResults[parseInt(cardBtn.dataset.idx, 10)];
+          showCharacterDetail(clicked);
+        });
+      });
+    }
+  });
+  const saveBtn = document.getElementById('charLookSaveToggleBtn');
+  let portraitForSave = null;
+  saveBtn.addEventListener('click', ()=>{
+    toggleCharacterSave({ id: item.id, label: item.label, portrait: portraitForSave });
+  });
+  const slot = document.getElementById('charLookPortraitSlot');
+  try{
+    const html = await fetchHtml('https://na.finalfantasyxiv.com/lodestone/character/' + item.id + '/', charLookUI.log);
+    const portrait = extractLodestonePortrait(html);
+    portraitForSave = portrait;
+    slot.innerHTML = portrait
+      ? ('<img src="' + portrait + '" alt="' + String(item.label).replace(/"/g, '&quot;') + '" class="char-portrait">')
+      : '<p class="recipe-meta" style="margin:0;">Couldn\'t pull a portrait image just now — the profile link above still works.</p>';
+  }catch(e){
+    slot.innerHTML = '<p class="recipe-meta" style="margin:0;">Couldn\'t reach their profile page just now (' + e.message + ') — the profile link above may still work directly.</p>';
+  }
+  // Collection Checker: total mounts/minions owned. There's no reliable way
+  // right now to say WHICH specific ones (see the big comment above
+  // extractLodestoneCollectionTotal) so this shows the honest headline
+  // numbers instead, each linking to their full public collection page.
+  const collectionSlot = document.getElementById('charLookCollectionSlot');
+  collectionSlot.textContent = 'Checking their collection totals...';
+  try{
+    const [mountHtml, minionHtml] = await Promise.all([
+      fetchHtml('https://na.finalfantasyxiv.com/lodestone/character/' + item.id + '/mount/', charLookUI.log).catch(()=>null),
+      fetchHtml('https://na.finalfantasyxiv.com/lodestone/character/' + item.id + '/minion/', charLookUI.log).catch(()=>null),
+    ]);
+    const mountTotal = mountHtml ? extractLodestoneCollectionTotal(mountHtml) : null;
+    const minionTotal = minionHtml ? extractLodestoneCollectionTotal(minionHtml) : null;
+    const bits = [];
+    if (mountTotal !== null) bits.push('🐴 <a href="https://na.finalfantasyxiv.com/lodestone/character/' + item.id + '/mount/" target="_blank" rel="noopener">' + mountTotal + ' mounts</a>');
+    if (minionTotal !== null) bits.push('🐣 <a href="https://na.finalfantasyxiv.com/lodestone/character/' + item.id + '/minion/" target="_blank" rel="noopener">' + minionTotal + ' minions</a>');
+    collectionSlot.innerHTML = bits.length
+      ? ('Collected: ' + bits.join(' · ') + ' <span style="opacity:.7;">(totals only — no public source exposes an itemized owned/needed list per mount or minion)</span>')
+      : 'Couldn\'t read their collection totals just now.';
+  }catch(e){
+    collectionSlot.textContent = 'Couldn\'t check their collection totals just now.';
+  }
+}
+
+// --- Saved characters: same favorites pattern as Glamour/Unlockables, keyed
+// by Lodestone character id. ---
+function loadCharacterSaves(){
+  try{ const l = JSON.parse(localStorage.getItem('lycaas_character_saves') || '[]'); return Array.isArray(l) ? l : []; }
+  catch(e){ return []; }
+}
+function saveCharacterSaves(list){ localStorage.setItem('lycaas_character_saves', JSON.stringify(list)); }
+function isCharacterSaved(id){ return loadCharacterSaves().some(c => String(c.id) === String(id)); }
+function toggleCharacterSave(item){
+  const list = loadCharacterSaves();
+  const idx = list.findIndex(c => String(c.id) === String(item.id));
+  if (idx === -1){
+    list.unshift({ id: item.id, label: item.label, portrait: item.portrait || null, savedAt: new Date().toISOString() });
+  } else {
+    list.splice(idx, 1);
+  }
+  saveCharacterSaves(list);
+  renderCharacterSaves();
+  const btn = document.getElementById('charLookSaveToggleBtn');
+  if (btn && String(btn.dataset.id) === String(item.id)){
+    const saved = isCharacterSaved(item.id);
+    btn.textContent = saved ? '★ Saved' : '☆ Save this character';
+    btn.classList.toggle('active-fav', saved);
+  }
+}
+function removeCharacterSave(id){
+  saveCharacterSaves(loadCharacterSaves().filter(c => String(c.id) !== String(id)));
+  renderCharacterSaves();
+}
+function renderCharacterSaves(){
+  const list = loadCharacterSaves();
+  const el = document.getElementById('charLookSavedList');
+  if (!list.length){ el.innerHTML = ''; el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  el.innerHTML = list.map((item, idx) => (
+    '<span class="fav-chip-wrap">'
+    + '<button class="recent-chip" data-saved-idx="' + idx + '">'
+    + (item.portrait ? ('<img src="' + item.portrait + '" alt="" class="fav-thumb">') : '')
+    + item.label + '</button>'
+    + '<button class="fav-remove" data-saved-remove-idx="' + idx + '" title="Remove">✕</button>'
+    + '</span>'
+  )).join('');
+  el.querySelectorAll('[data-saved-idx]').forEach(btn => {
+    btn.addEventListener('click', ()=>{
+      const item = list[parseInt(btn.dataset.savedIdx, 10)];
+      showCharacterDetail({ id: item.id, label: item.label });
+    });
+  });
+  el.querySelectorAll('[data-saved-remove-idx]').forEach(btn => {
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const item = list[parseInt(btn.dataset.savedRemoveIdx, 10)];
+      removeCharacterSave(item.id);
+    });
+  });
+}
+function exportCharacterSaves(){
+  const list = loadCharacterSaves();
+  if (!list.length){ alert('No saved characters yet — nothing to export.'); return; }
+  const payload = { exportedFrom: 'Lycaa\'s Slave', exportedAt: new Date().toISOString(), characterSaves: list };
+  downloadTextFile('lycaas-saved-characters.json', JSON.stringify(payload, null, 2), 'application/json');
+}
+function importCharacterSavesFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      const incoming = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.characterSaves) ? parsed.characterSaves : null);
+      if (!incoming) throw new Error('not a recognizable saved-characters file');
+      const current = loadCharacterSaves();
+      const currentIds = new Set(current.map(c => String(c.id)));
+      let added = 0;
+      incoming.forEach(c => {
+        if (!c || c.id === undefined || c.id === null || !c.label) return;
+        if (currentIds.has(String(c.id))) return;
+        current.push({ id: c.id, label: c.label, portrait: c.portrait || null, savedAt: c.savedAt || new Date().toISOString() });
+        currentIds.add(String(c.id));
+        added++;
+      });
+      saveCharacterSaves(current);
+      renderCharacterSaves();
+      const conf = document.getElementById('charLookSavedImportConfirm');
+      conf.textContent = added ? ('Imported ' + added + ' saved character(s).') : 'Nothing new to import — already had all of those.';
+      conf.classList.remove('hidden');
+      setTimeout(()=>conf.classList.add('hidden'), 3500);
+    }catch(e){
+      alert('That doesn\'t look like a saved-characters export file (' + e.message + ').');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// --- Small shared id generator for anything that just needs a unique local
+// key (daily tasks, to-do items) — no server, so this never has to be a real UUID. ---
+function makeId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+// --- Daily/Weekly Tasks: a recurring checklist that auto-unchecks itself on
+// FFXIV's own reset schedule — daily reset is 15:00 UTC every day, weekly
+// reset is the same time every Tuesday. Add whatever you actually grind;
+// the four seeded defaults are just a starting point, not gospel. ---
+const FFXIV_RESET_HOUR_UTC = 15;
+function seedDefaultDailyTasks(){
+  return [
+    { id: makeId(), text: 'Duty Roulette: Leveling', type: 'daily', done: false },
+    { id: makeId(), text: 'Duty Roulette: Trials', type: 'daily', done: false },
+    { id: makeId(), text: 'Beast Tribe Quests', type: 'daily', done: false },
+    { id: makeId(), text: 'Wondrous Tails book', type: 'weekly', done: false },
+    { id: makeId(), text: 'Custom Deliveries', type: 'weekly', done: false },
+  ];
+}
+function ffxivDailyResetBoundary(){
+  // Ms timestamp of the most recent daily reset at-or-before right now.
+  const now = new Date();
+  const boundary = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), FFXIV_RESET_HOUR_UTC, 0, 0));
+  if (boundary.getTime() > now.getTime()) boundary.setUTCDate(boundary.getUTCDate() - 1);
+  return boundary.getTime();
+}
+function ffxivWeeklyResetBoundary(){
+  // Walk back from the most recent daily boundary to the most recent Tuesday.
+  const boundary = new Date(ffxivDailyResetBoundary());
+  while (boundary.getUTCDay() !== 2){ boundary.setUTCDate(boundary.getUTCDate() - 1); } // 2 = Tuesday
+  return boundary.getTime();
+}
+function loadDailyTaskMeta(){
+  try{ return JSON.parse(localStorage.getItem('lycaas_daily_tasks_meta') || '{}'); }
+  catch(e){ return {}; }
+}
+function saveDailyTaskMeta(meta){ localStorage.setItem('lycaas_daily_tasks_meta', JSON.stringify(meta)); }
+function applyTaskResets(tasks){
+  const meta = loadDailyTaskMeta();
+  const dailyBoundary = ffxivDailyResetBoundary();
+  const weeklyBoundary = ffxivWeeklyResetBoundary();
+  let changed = false;
+  if (!meta.lastDailyReset || meta.lastDailyReset < dailyBoundary){
+    tasks.forEach(t => { if (t.type === 'daily') t.done = false; });
+    meta.lastDailyReset = dailyBoundary;
+    changed = true;
+  }
+  if (!meta.lastWeeklyReset || meta.lastWeeklyReset < weeklyBoundary){
+    tasks.forEach(t => { if (t.type === 'weekly') t.done = false; });
+    meta.lastWeeklyReset = weeklyBoundary;
+    changed = true;
+  }
+  if (changed) saveDailyTaskMeta(meta);
+  return tasks;
+}
+function saveDailyTasks(tasks){ localStorage.setItem('lycaas_daily_tasks', JSON.stringify(tasks)); }
+function loadDailyTasks(){
+  let tasks;
+  try{ tasks = JSON.parse(localStorage.getItem('lycaas_daily_tasks') || 'null'); }
+  catch(e){ tasks = null; }
+  if (!Array.isArray(tasks)) tasks = seedDefaultDailyTasks();
+  tasks = applyTaskResets(tasks);
+  saveDailyTasks(tasks);
+  return tasks;
+}
+function addDailyTask(text, type){
+  if (!text || !text.trim()) return;
+  const tasks = loadDailyTasks();
+  tasks.push({ id: makeId(), text: text.trim(), type: (type === 'weekly' ? 'weekly' : 'daily'), done: false });
+  saveDailyTasks(tasks);
+  renderDailyTasks();
+}
+function toggleDailyTask(id){
+  const tasks = loadDailyTasks();
+  const t = tasks.find(x => x.id === id);
+  if (t) t.done = !t.done;
+  saveDailyTasks(tasks);
+  renderDailyTasks();
+}
+function removeDailyTask(id){
+  saveDailyTasks(loadDailyTasks().filter(x => x.id !== id));
+  renderDailyTasks();
+}
+function renderTaskGroup(list, label, emptyHint){
+  if (!list.length) return '<h4 style="margin:12px 0 4px;">' + label + '</h4><p class="recipe-meta">' + emptyHint + '</p>';
+  const doneCount = list.filter(t => t.done).length;
+  return '<h4 style="margin:12px 0 4px;">' + label + ' <span class="recipe-meta" style="font-weight:400;">(' + doneCount + '/' + list.length + ')</span></h4>' +
+    '<div class="task-list">' + list.map(t => `
+      <label class="task-row${t.done ? ' task-done' : ''}">
+        <input type="checkbox" data-task-id="${t.id}" ${t.done ? 'checked' : ''}>
+        <span>${t.text}</span>
+        <button type="button" class="task-remove" data-remove-id="${t.id}" title="Remove">✕</button>
+      </label>
+    `).join('') + '</div>';
+}
+function renderDailyTasks(){
+  const tasks = loadDailyTasks();
+  const dailies = tasks.filter(t => t.type === 'daily');
+  const weeklies = tasks.filter(t => t.type === 'weekly');
+  const el = document.getElementById('dailyTasksBody');
+  el.innerHTML = renderTaskGroup(dailies, 'Daily', 'No daily tasks yet — add one above.')
+    + renderTaskGroup(weeklies, 'Weekly', 'No weekly tasks yet — add one above.');
+  el.querySelectorAll('[data-task-id]').forEach(cb => cb.addEventListener('change', ()=>toggleDailyTask(cb.dataset.taskId)));
+  el.querySelectorAll('[data-remove-id]').forEach(btn => btn.addEventListener('click', ()=>removeDailyTask(btn.dataset.removeId)));
+}
+
+// --- To-Do: freeform game goals, no resets — just add, check off, remove. ---
+function loadTodoList(){
+  try{ const l = JSON.parse(localStorage.getItem('lycaas_todo_list') || '[]'); return Array.isArray(l) ? l : []; }
+  catch(e){ return []; }
+}
+function saveTodoList(list){ localStorage.setItem('lycaas_todo_list', JSON.stringify(list)); }
+function addTodoItem(text){
+  if (!text || !text.trim()) return;
+  const list = loadTodoList();
+  list.push({ id: makeId(), text: text.trim(), done: false, addedAt: new Date().toISOString() });
+  saveTodoList(list);
+  renderTodoList();
+}
+function toggleTodoItem(id){
+  const list = loadTodoList();
+  const item = list.find(x => x.id === id);
+  if (item) item.done = !item.done;
+  saveTodoList(list);
+  renderTodoList();
+}
+function removeTodoItem(id){
+  saveTodoList(loadTodoList().filter(x => x.id !== id));
+  renderTodoList();
+}
+function clearCompletedTodos(){
+  saveTodoList(loadTodoList().filter(x => !x.done));
+  renderTodoList();
+}
+function renderTodoList(){
+  const list = loadTodoList();
+  const el = document.getElementById('todoListBody');
+  const doneCount = list.filter(t => t.done).length;
+  document.getElementById('todoCounter').textContent = list.length ? (doneCount + ' of ' + list.length + ' done') : '';
+  if (!list.length){ el.innerHTML = '<p class="recipe-meta">Nothing on your list yet — add a goal above (e.g. "Eureka: Anemos gear").</p>'; return; }
+  const ordered = [...list.filter(t => !t.done), ...list.filter(t => t.done)];
+  el.innerHTML = '<div class="task-list">' + ordered.map(t => `
+    <label class="task-row${t.done ? ' task-done' : ''}">
+      <input type="checkbox" data-todo-id="${t.id}" ${t.done ? 'checked' : ''}>
+      <span>${t.text}</span>
+      <button type="button" class="task-remove" data-todo-remove-id="${t.id}" title="Remove">✕</button>
+    </label>
+  `).join('') + '</div>';
+  el.querySelectorAll('[data-todo-id]').forEach(cb => cb.addEventListener('change', ()=>toggleTodoItem(cb.dataset.todoId)));
+  el.querySelectorAll('[data-todo-remove-id]').forEach(btn => btn.addEventListener('click', ()=>removeTodoItem(btn.dataset.todoRemoveId)));
+}
+
+// --- Command palette (Ctrl+K / Cmd+K): a "jump to anything" search. Every
+// result source here is already sitting in memory or localStorage — windows,
+// presets, saved characters, favorites, to-do/daily tasks — so nothing here
+// hits the network as you type. A real item/mount/etc catalog search would
+// mean re-implementing Craft Cost's and Unlockables' own network lookups a
+// second time just for live-as-you-type results, which isn't worth the extra
+// API load; instead, typing something that doesn't match anything local
+// offers to jump straight to the right tab with your text pre-filled and
+// already running the search there.
+//
+// Note on the shortcut itself: real macOS Spotlight (Cmd+Space) is caught by
+// the operating system before it ever reaches a browser tab, so a web page
+// can't bind to it — Ctrl+K/Cmd+K is the standard substitute (Linear, GitHub,
+// Slack, Notion all use it) and is the one actually usable here.
+const WINDOW_META = {
+  craft: { emoji:'📦', label:'Craft Cost' },
+  lookup: { emoji:'🔍', label:'Item Lookup' },
+  shopping: { emoji:'🛒', label:'Shopping List' },
+  profit: { emoji:'💰', label:'Profit Calc' },
+  watch: { emoji:'📊', label:'Watchlist' },
+  glamour: { emoji:'👗', label:'Glamour' },
+  unlockables: { emoji:'🐴', label:'Unlockables' },
+  personalStats: { emoji:'📜', label:'Personal Stats' },
+  characterLook: { emoji:'🧑‍🎤', label:'Character Look' },
+  dailyTasks: { emoji:'✅', label:'Daily Tasks' },
+  todo: { emoji:'📝', label:'To-Do' },
+};
+const PRESET_META = {
+  glamourFitting: { emoji:'👗', label:'Glamour Fitting layout' },
+  craftingDesk: { emoji:'📦', label:'Crafting Desk layout' },
+  marketWatch: { emoji:'📊', label:'Market Watch layout' },
+  collectorsCorner: { emoji:'🐴', label:"Collector's Corner layout" },
+};
+let paletteActiveIdx = -1;
+let paletteRowsCache = [];
+function paletteRow(emoji, label, tag, action){ return { emoji, label, tag, action }; }
+function buildPaletteRows(query){
+  const q = query.trim().toLowerCase();
+  const rows = [];
+  if (!q){
+    WINDOW_IDS.forEach(id => {
+      const meta = WINDOW_META[id];
+      rows.push(paletteRow(meta.emoji, 'Open ' + meta.label, 'window', ()=>openWindow(id)));
+    });
+    return rows;
+  }
+  WINDOW_IDS.forEach(id => {
+    const meta = WINDOW_META[id];
+    if (meta.label.toLowerCase().includes(q)) rows.push(paletteRow(meta.emoji, 'Open ' + meta.label, 'window', ()=>openWindow(id)));
+  });
+  Object.keys(PRESET_META).forEach(name => {
+    const meta = PRESET_META[name];
+    if (meta.label.toLowerCase().includes(q)) rows.push(paletteRow(meta.emoji, meta.label, 'layout', ()=>applyPreset(name)));
+  });
+  loadCharacterSaves().forEach(c => {
+    if (c.label && c.label.toLowerCase().includes(q)){
+      rows.push(paletteRow('🧑‍🎤', c.label, 'saved character', ()=>{
+        openWindow('characterLook');
+        showCharacterDetail({ id: c.id, label: c.label });
+      }));
+    }
+  });
+  loadGlamourFavorites().forEach(g => {
+    if (g.name && g.name.toLowerCase().includes(q)){
+      rows.push(paletteRow('👗', g.name, 'glamour favorite', ()=>{
+        openWindow('glamour');
+        document.getElementById('glamourInput').value = g.url;
+        lookupGlamour();
+      }));
+    }
+  });
+  loadUnlockFavorites().forEach(u => {
+    if (u.name && u.name.toLowerCase().includes(q)){
+      rows.push(paletteRow(UNLOCKABLE_TYPE_ICONS[u.type] || '🐴', u.name, u.type.toLowerCase(), ()=>{
+        openWindow('unlockables');
+        showUnlockSubTab(u.type);
+        showUnlockableDetail(u.type, { id: u.id, name: u.name, icon: u.icon, image: u.icon });
+      }));
+    }
+  });
+  loadTodoList().forEach(t => {
+    if (t.text && t.text.toLowerCase().includes(q)) rows.push(paletteRow(t.done ? '✔️' : '📝', t.text, 'to-do', ()=>openWindow('todo')));
+  });
+  loadDailyTasks().forEach(t => {
+    if (t.text && t.text.toLowerCase().includes(q)) rows.push(paletteRow(t.done ? '✔️' : (t.type === 'weekly' ? '📅' : '✅'), t.text, t.type, ()=>openWindow('dailyTasks')));
+  });
+  const trimmed = query.trim();
+  rows.push(paletteRow('📦', 'Search Craft Cost for "' + trimmed + '"', 'action', ()=>{
+    openWindow('craft'); document.getElementById('wikiUrl').value = trimmed; lookupRecipe();
+  }));
+  rows.push(paletteRow('🔍', 'Search Item Lookup for "' + trimmed + '"', 'action', ()=>{
+    openWindow('lookup'); document.getElementById('lookupInput').value = trimmed; lookupItem();
+  }));
+  rows.push(paletteRow('🐴', 'Search Unlockables (Mount) for "' + trimmed + '"', 'action', ()=>{
+    openWindow('unlockables'); showUnlockSubTab('Mount');
+    document.getElementById('unlockMountInput').value = trimmed; searchUnlockable('Mount');
+  }));
+  return rows;
+}
+function renderPaletteResults(query){
+  const rows = buildPaletteRows(query);
+  paletteRowsCache = rows;
+  paletteActiveIdx = rows.length ? 0 : -1;
+  const el = document.getElementById('paletteResults');
+  if (!rows.length){
+    el.innerHTML = '<div class="palette-empty">Nothing matches that — try a window name, a saved character, or a favorite.</div>';
+    return;
+  }
+  el.innerHTML = rows.map((r, idx) => `
+    <button class="palette-row${idx === 0 ? ' active' : ''}" type="button" data-idx="${idx}">
+      <span>${r.emoji}</span><span>${r.label}</span><span class="palette-tag">${r.tag}</span>
+    </button>
+  `).join('');
+  el.querySelectorAll('.palette-row').forEach(btn => {
+    btn.addEventListener('click', ()=>{ rows[parseInt(btn.dataset.idx, 10)].action(); closePalette(); });
+    btn.addEventListener('mouseenter', ()=>{ paletteActiveIdx = parseInt(btn.dataset.idx, 10); updatePaletteActiveRow(); });
+  });
+}
+function updatePaletteActiveRow(){
+  document.querySelectorAll('.palette-row').forEach((btn, idx) => btn.classList.toggle('active', idx === paletteActiveIdx));
+}
+function openPalette(){
+  document.getElementById('paletteBackdrop').classList.remove('hidden');
+  const input = document.getElementById('paletteInput');
+  input.value = '';
+  renderPaletteResults('');
+  setTimeout(()=>input.focus(), 0);
+}
+function closePalette(){
+  document.getElementById('paletteBackdrop').classList.add('hidden');
+}
+document.getElementById('paletteInput').addEventListener('input', (e)=>renderPaletteResults(e.target.value));
+document.getElementById('paletteInput').addEventListener('keydown', (e)=>{
+  if (e.key === 'ArrowDown'){
+    e.preventDefault();
+    if (paletteRowsCache.length){ paletteActiveIdx = (paletteActiveIdx + 1) % paletteRowsCache.length; updatePaletteActiveRow(); }
+  } else if (e.key === 'ArrowUp'){
+    e.preventDefault();
+    if (paletteRowsCache.length){ paletteActiveIdx = (paletteActiveIdx - 1 + paletteRowsCache.length) % paletteRowsCache.length; updatePaletteActiveRow(); }
+  } else if (e.key === 'Enter'){
+    e.preventDefault();
+    if (paletteActiveIdx >= 0 && paletteRowsCache[paletteActiveIdx]){ paletteRowsCache[paletteActiveIdx].action(); closePalette(); }
+  } else if (e.key === 'Escape'){
+    closePalette();
+  }
+});
+document.getElementById('paletteBackdrop').addEventListener('click', (e)=>{ if (e.target.id === 'paletteBackdrop') closePalette(); });
+document.addEventListener('keydown', (e)=>{
+  const key = e.key.toLowerCase();
+  if ((e.metaKey || e.ctrlKey) && key === 'k'){
+    e.preventDefault();
+    if (document.getElementById('paletteBackdrop').classList.contains('hidden')) openPalette();
+    else closePalette();
+  }
+});
+
+document.getElementById('charLookBtn').addEventListener('click', searchCharacters);
+document.getElementById('charLookNameInput').addEventListener('keydown', e=>{ if (e.key === 'Enter') searchCharacters(); });
+document.getElementById('charLookWorldInput').addEventListener('keydown', e=>{ if (e.key === 'Enter') searchCharacters(); });
+renderRecent('lycaas_recent_charlook', 'charLookRecent', entry => showCharacterDetail(entry.data));
+document.getElementById('charLookSavedExportBtn').addEventListener('click', exportCharacterSaves);
+document.getElementById('charLookSavedImportBtn').addEventListener('click', ()=>document.getElementById('charLookSavedImportFile').click());
+document.getElementById('charLookSavedImportFile').addEventListener('change', (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if (file) importCharacterSavesFile(file);
+  e.target.value = '';
+});
+renderCharacterSaves();
+
+document.getElementById('dailyTaskAddBtn').addEventListener('click', ()=>{
+  const input = document.getElementById('dailyTaskInput');
+  addDailyTask(input.value, document.getElementById('dailyTaskType').value);
+  input.value = '';
+  input.focus();
+});
+document.getElementById('dailyTaskInput').addEventListener('keydown', e=>{ if (e.key === 'Enter') document.getElementById('dailyTaskAddBtn').click(); });
+
+document.getElementById('todoAddBtn').addEventListener('click', ()=>{
+  const input = document.getElementById('todoInput');
+  addTodoItem(input.value);
+  input.value = '';
+  input.focus();
+});
+document.getElementById('todoInput').addEventListener('keydown', e=>{ if (e.key === 'Enter') document.getElementById('todoAddBtn').click(); });
+document.getElementById('todoClearDoneBtn').addEventListener('click', clearCompletedTodos);
+renderDailyTasks();
+renderTodoList();
+
 document.getElementById('glamourBtn').addEventListener('click', lookupGlamour);
 document.getElementById('glamourInput').addEventListener('keydown', e=>{ if(e.key==='Enter') lookupGlamour(); });
 renderRecent('lycaas_recent_glamour', 'recentGlamour', item => {
@@ -4395,11 +5424,20 @@ document.getElementById('glamourFavImportFile').addEventListener('change', (e)=>
 });
 renderGlamourFavorites();
 
-['Mount','Minion','Emote','Fashion'].forEach(t => {
+UNLOCK_SUBTAB_IDS.forEach(t => {
   document.getElementById('unlock' + t + 'Btn').addEventListener('click', ()=>searchUnlockable(t));
   document.getElementById('unlock' + t + 'Input').addEventListener('keydown', e=>{ if (e.key === 'Enter') searchUnlockable(t); });
   renderRecent('lycaas_recent_unlock_' + t.toLowerCase(), 'unlock' + t + 'Recent', entry => showUnlockableDetail(t, entry.data));
 });
+
+document.getElementById('unlockFavExportBtn').addEventListener('click', exportUnlockFavorites);
+document.getElementById('unlockFavImportBtn').addEventListener('click', ()=>document.getElementById('unlockFavImportFile').click());
+document.getElementById('unlockFavImportFile').addEventListener('change', (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if (file) importUnlockFavoritesFile(file);
+  e.target.value = '';
+});
+renderUnlockFavorites();
 
 (function restoreMood(){
   const n = parseInt(sessionStorage.getItem('lycaas_search_count') || '0', 10);
