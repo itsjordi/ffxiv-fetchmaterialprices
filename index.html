@@ -268,13 +268,49 @@
   .lookup-result{margin-top:4px;}
   .lookup-result h3{margin:0 0 4px;}
 
+  /* Basket used to permanently camp the top-right corner even when empty and
+     completely unrelated to whatever you were doing. Now it lives bottom-right
+     (top-right belongs to the claimed-character badge) and only appears at all
+     once it actually has something in it — see updateBasketBarVisibility(). */
   #basketBar{
-    position:fixed; top:16px; right:16px; z-index:9000; width:300px;
-    max-width:calc(100vw - 32px); max-height:80vh; overflow-y:auto;
+    position:fixed; bottom:16px; right:16px; z-index:9000; width:280px;
+    max-width:calc(100vw - 32px); max-height:70vh; overflow-y:auto;
   }
+  #basketBar.hidden{display:none;}
   @media (max-width:900px){
     #basketBar{position:static; width:auto; max-height:none; margin-bottom:16px;}
   }
+
+  /* --- Claimed character badge: a lightweight "logged in as" indicator.
+     Top-right, always in the DOM — its own innerHTML swaps between a subtle
+     "claim your character" invite and the real avatar+name badge once one is
+     claimed, so no separate hidden/visible states to keep in sync. --- */
+  .claimed-badge{
+    position:fixed; top:16px; right:16px; z-index:9200;
+  }
+  .claimed-login-btn{
+    display:flex; align-items:center; gap:6px; background:var(--panel); border:1px solid var(--border);
+    color:var(--dim); font-size:.82rem; padding:7px 12px; border-radius:20px; white-space:nowrap;
+    box-shadow:0 4px 12px rgba(0,0,0,.18);
+  }
+  .claimed-login-btn:hover{color:var(--accent); border-color:var(--accent-dim);}
+  .claimed-badge-btn{
+    display:flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--border);
+    padding:5px 14px 5px 5px; border-radius:20px; box-shadow:0 4px 12px rgba(0,0,0,.18); color:var(--ink);
+  }
+  .claimed-badge-btn:hover{border-color:var(--accent-dim);}
+  .claimed-badge-avatar{
+    width:32px; height:32px; border-radius:50%; object-fit:cover; flex-shrink:0; background:var(--panel2);
+    border:1px solid var(--border);
+  }
+  .claimed-badge-avatar-fallback{display:flex; align-items:center; justify-content:center; font-size:1rem;}
+  .claimed-badge-name{font-weight:700; color:var(--accent); white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis;}
+  .claimed-badge-popover{
+    position:absolute; top:calc(100% + 8px); right:0; width:230px;
+    background:var(--paper); border:1px solid var(--border); border-radius:8px;
+    box-shadow:0 10px 26px rgba(0,0,0,.28); padding:12px; z-index:9200;
+  }
+  .claimed-badge-popover.hidden{display:none;}
   .basket-item{
     display:flex; justify-content:space-between; align-items:center; gap:10px;
     padding:8px 0; border-bottom:1px dashed var(--border); font-size:.9rem;
@@ -592,6 +628,8 @@
     <p class="footer-note" id="footerNote">the slave fetches; the slave does not explain itself.</p>
   </div>
 
+  <div class="claimed-badge" id="claimedBadge"></div>
+
   <div id="infoModalBackdrop" class="info-modal-backdrop hidden">
     <div class="info-modal" id="infoModal">
       <div class="window-titlebar" style="cursor:default;">
@@ -680,7 +718,7 @@
     whoever gave you this to host it somewhere (GitHub Pages, etc.) instead of sending you the raw file.</p>
   </div>
 
-  <div class="panel" id="basketBar">
+  <div class="panel hidden" id="basketBar">
     <div class="row" style="align-items:center; margin-bottom:0;">
       <button id="basketToggleBtn" class="secondary" style="flex:1;">🧺 Basket (<span id="basketCount">0</span>) <span id="basketTotal"></span></button>
     </div>
@@ -1047,6 +1085,7 @@
     </div>
     <div class="panel">
       <p class="recipe-meta" style="margin-top:0;">Look up mounts, minions, emotes, fashion accessories, achievements, orchestrion rolls, and Triple Triad cards — see what they look like and how to get them. Data via <a href="https://ffxivcollect.com/" target="_blank" rel="noopener">FFXIV Collect</a>.</p>
+      <p class="recipe-meta hidden" id="unlockClaimedLinks" style="margin-top:0;"></p>
       <div id="unlockFavoritesList" class="recent-strip hidden"></div>
       <div class="row">
         <button id="unlockFavExportBtn" class="secondary">Export favorites</button>
@@ -1569,6 +1608,7 @@ function updateLauncherActiveState(){
   document.querySelectorAll('.launcher-btn[data-win]').forEach(btn=>{
     btn.classList.toggle('open', isWindowOpen(btn.dataset.win));
   });
+  if (typeof updateBasketBarVisibility === 'function') updateBasketBarVisibility();
 }
 
 function openWindow(id){
@@ -3543,6 +3583,7 @@ function renderBasket(){
   const body = document.getElementById('basketItems');
   if (!list.length){
     body.innerHTML = '<p class="recipe-meta" style="margin:0;">Basket\'s empty. Go find something to make the slave suffer for.</p>';
+    updateBasketBarVisibility();
     return;
   }
   body.innerHTML = list.map(i => `
@@ -3563,6 +3604,19 @@ function renderBasket(){
   body.querySelectorAll('.qty-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>adjustBasketQty(btn.dataset.key, parseInt(btn.dataset.delta, 10)));
   });
+  updateBasketBarVisibility();
+}
+// The basket used to float top-right permanently, empty or not, whatever tab
+// you were on. Now it only shows up when it's actually relevant: something's
+// in it, AND you have Craft Cost, Shopping List, or Profit Calc open (the
+// three windows that add to or consume it). Re-checked on every basket change
+// and every window open/close (see updateLauncherActiveState).
+function updateBasketBarVisibility(){
+  const bar = document.getElementById('basketBar');
+  if (!bar) return;
+  const hasItems = loadBasket().length > 0;
+  const relevantWindowOpen = ['craft', 'shopping', 'profit'].some(id => isWindowOpen(id));
+  bar.classList.toggle('hidden', !(hasItems && relevantWindowOpen));
 }
 async function copyBasket(){
   const list = loadBasket();
@@ -5284,10 +5338,17 @@ async function showCharacterDetail(item){
         <a href="https://na.finalfantasyxiv.com/lodestone/character/${item.id}/" target="_blank" rel="noopener">View full profile on Lodestone →</a>
       </p>
       <div id="charLookCollectionSlot" class="recipe-meta"></div>
-      <button class="secondary charlook-save-btn" type="button" id="charLookSaveToggleBtn" data-id="${item.id}"
-        data-label="${String(item.label).replace(/"/g, '&quot;')}">
-        ${isCharacterSaved(item.id) ? '★ Saved' : '☆ Save this character'}
-      </button>
+      <div class="row" style="margin-top:8px;">
+        <button class="secondary charlook-save-btn" type="button" id="charLookSaveToggleBtn" data-id="${item.id}"
+          data-label="${String(item.label).replace(/"/g, '&quot;')}">
+          ${isCharacterSaved(item.id) ? '★ Saved' : '☆ Save this character'}
+        </button>
+        <button class="secondary charlook-claim-btn" type="button" id="charLookClaimToggleBtn" data-id="${item.id}"
+          data-label="${String(item.label).replace(/"/g, '&quot;')}">
+          ${isClaimedCharacter(item.id) ? '👑 This is you — Unclaim' : '👑 Claim as me'}
+        </button>
+      </div>
+      <p class="recipe-meta" style="margin:6px 0 0;">Claiming shows their avatar top-right and personalizes a few pages — it's just a local "remember this is me," nothing is uploaded anywhere.</p>
     </div>
   `;
   resultsEl.querySelector('.charlook-back-btn').addEventListener('click', ()=>{
@@ -5308,8 +5369,15 @@ async function showCharacterDetail(item){
   });
   const saveBtn = document.getElementById('charLookSaveToggleBtn');
   let portraitForSave = null;
+  let claimMountTotal = null;
+  let claimMinionTotal = null;
   saveBtn.addEventListener('click', ()=>{
     toggleCharacterSave({ id: item.id, label: item.label, portrait: portraitForSave });
+  });
+  const claimBtn = document.getElementById('charLookClaimToggleBtn');
+  claimBtn.addEventListener('click', ()=>{
+    toggleClaimCharacter({ id: item.id, label: item.label, portrait: portraitForSave, mountTotal: claimMountTotal, minionTotal: claimMinionTotal });
+    claimBtn.innerHTML = isClaimedCharacter(item.id) ? '👑 This is you — Unclaim' : '👑 Claim as me';
   });
   const slot = document.getElementById('charLookPortraitSlot');
   try{
@@ -5335,6 +5403,14 @@ async function showCharacterDetail(item){
     ]);
     const mountTotal = mountHtml ? extractLodestoneCollectionTotal(mountHtml) : null;
     const minionTotal = minionHtml ? extractLodestoneCollectionTotal(minionHtml) : null;
+    claimMountTotal = mountTotal;
+    claimMinionTotal = minionTotal;
+    // If this is already your claimed character, refresh the stored totals/
+    // portrait with whatever just came back — keeps the top-right badge's
+    // popover numbers current without making claiming itself do any work.
+    if (isClaimedCharacter(item.id)){
+      claimCharacter({ id: item.id, label: item.label, portrait: portraitForSave, mountTotal, minionTotal });
+    }
     const bits = [];
     if (mountTotal !== null) bits.push('🐴 <a href="https://na.finalfantasyxiv.com/lodestone/character/' + item.id + '/mount/" target="_blank" rel="noopener">' + mountTotal + ' mounts</a>');
     if (minionTotal !== null) bits.push('🐣 <a href="https://na.finalfantasyxiv.com/lodestone/character/' + item.id + '/minion/" target="_blank" rel="noopener">' + minionTotal + ' minions</a>');
@@ -5384,6 +5460,7 @@ function renderCharacterSaves(){
     '<span class="fav-chip-wrap">'
     + '<button class="recent-chip" data-saved-idx="' + idx + '">'
     + (item.portrait ? ('<img src="' + item.portrait + '" alt="" class="fav-thumb">') : '')
+    + (isClaimedCharacter(item.id) ? '👑 ' : '')
     + item.label + '</button>'
     + '<button class="fav-remove" data-saved-remove-idx="' + idx + '" title="Remove">✕</button>'
     + '</span>'
@@ -5436,6 +5513,108 @@ function importCharacterSavesFile(file){
     }
   };
   reader.readAsText(file);
+}
+
+// --- Claimed character: a "logged in as" indicator, not an actual account —
+// there's no server, so "claiming" just means "remember this Lodestone id as
+// mine" in localStorage and reflect it back everywhere the app can honestly
+// do so (the top-right badge, a crown marker in Character Look, and quick
+// links out to your own collection pages from Unlockables). Per-item
+// mount/minion ownership still can't be shown inline (see the big comment
+// above extractLodestoneCollectionTotal) — claiming doesn't change that,
+// it just personalizes what's already true and available. ---
+function loadClaimedCharacter(){
+  try{ return JSON.parse(localStorage.getItem('lycaas_claimed_character') || 'null'); }
+  catch(e){ return null; }
+}
+function saveClaimedCharacterData(data){ localStorage.setItem('lycaas_claimed_character', JSON.stringify(data)); }
+function clearClaimedCharacterData(){ localStorage.removeItem('lycaas_claimed_character'); }
+function isClaimedCharacter(id){
+  const c = loadClaimedCharacter();
+  return !!c && String(c.id) === String(id);
+}
+function claimCharacter(item){
+  saveClaimedCharacterData({
+    id: item.id, label: item.label, portrait: item.portrait || null,
+    mountTotal: (item.mountTotal === undefined) ? null : item.mountTotal,
+    minionTotal: (item.minionTotal === undefined) ? null : item.minionTotal,
+    claimedAt: new Date().toISOString(),
+  });
+  renderClaimedBadge();
+  renderCharacterSaves();
+  renderUnlockClaimedLinks();
+  trackEvent('claim-character', 'Claimed a character');
+}
+function unclaimCharacter(){
+  clearClaimedCharacterData();
+  renderClaimedBadge();
+  renderCharacterSaves();
+  renderUnlockClaimedLinks();
+}
+function toggleClaimCharacter(item){
+  if (isClaimedCharacter(item.id)) unclaimCharacter(); else claimCharacter(item);
+}
+function renderClaimedBadge(){
+  const badge = document.getElementById('claimedBadge');
+  if (!badge) return;
+  const c = loadClaimedCharacter();
+  if (!c){
+    badge.innerHTML = `<button type="button" id="claimedLoginBtn" class="claimed-login-btn" title="Search and claim your FFXIV character">🔒 <span>Claim your character</span></button>`;
+    document.getElementById('claimedLoginBtn').addEventListener('click', ()=>{
+      openWindow('characterLook');
+      const input = document.getElementById('charLookNameInput');
+      if (input) input.focus();
+    });
+    return;
+  }
+  const safeLabel = String(c.label).replace(/"/g, '&quot;');
+  const totalsBits = [];
+  if (c.mountTotal !== null && c.mountTotal !== undefined) totalsBits.push('🐴 ' + c.mountTotal + ' mounts');
+  if (c.minionTotal !== null && c.minionTotal !== undefined) totalsBits.push('🐣 ' + c.minionTotal + ' minions');
+  badge.innerHTML = `
+    <button type="button" id="claimedBadgeBtn" class="claimed-badge-btn" title="${safeLabel} — you">
+      ${c.portrait ? ('<img src="' + c.portrait + '" alt="" class="claimed-badge-avatar">') : '<span class="claimed-badge-avatar claimed-badge-avatar-fallback">🧑‍🎤</span>'}
+      <span class="claimed-badge-name">${safeLabel}</span>
+    </button>
+    <div class="claimed-badge-popover hidden" id="claimedBadgePopover">
+      <p style="margin:0 0 4px; font-weight:700; color:var(--ink);">${safeLabel}</p>
+      <p class="recipe-meta" style="margin:0 0 10px;">${totalsBits.length ? totalsBits.join(' · ') : 'Collection totals not fetched yet.'}</p>
+      <div class="row" style="margin:0;">
+        <button type="button" class="secondary" id="claimedViewBtn" style="flex:1;">View</button>
+        <button type="button" class="secondary" id="claimedUnclaimBtn" style="flex:1;">Unclaim</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('claimedBadgeBtn').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    document.getElementById('claimedBadgePopover').classList.toggle('hidden');
+  });
+  document.getElementById('claimedViewBtn').addEventListener('click', ()=>{
+    document.getElementById('claimedBadgePopover').classList.add('hidden');
+    openWindow('characterLook');
+    showCharacterDetail({ id: c.id, label: c.label });
+  });
+  document.getElementById('claimedUnclaimBtn').addEventListener('click', ()=>{
+    if (confirm('Unclaim ' + c.label + '? You can claim them (or anyone else) again any time.')) unclaimCharacter();
+  });
+}
+// Close the popover on any click outside the badge itself.
+document.addEventListener('click', (e)=>{
+  const popover = document.getElementById('claimedBadgePopover');
+  if (!popover || popover.classList.contains('hidden')) return;
+  if (!e.target.closest('.claimed-badge')) popover.classList.add('hidden');
+});
+// Renders (or clears) the "quick links to your own collection" line inside
+// the Unlockables header — the honest alternative to per-item owned badges.
+function renderUnlockClaimedLinks(){
+  const el = document.getElementById('unlockClaimedLinks');
+  if (!el) return;
+  const c = loadClaimedCharacter();
+  if (!c){ el.innerHTML = ''; el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  el.innerHTML = 'Playing as <b>' + String(c.label).replace(/"/g, '&quot;') + '</b> — '
+    + '<a href="https://na.finalfantasyxiv.com/lodestone/character/' + c.id + '/mount/" target="_blank" rel="noopener">your mounts</a> · '
+    + '<a href="https://na.finalfantasyxiv.com/lodestone/character/' + c.id + '/minion/" target="_blank" rel="noopener">your minions</a> on Lodestone.';
 }
 
 // --- Small shared id generator for anything that just needs a unique local
@@ -5865,6 +6044,7 @@ document.getElementById('charLookSavedImportFile').addEventListener('change', (e
   e.target.value = '';
 });
 renderCharacterSaves();
+renderClaimedBadge();
 
 document.getElementById('dailyTaskAddBtn').addEventListener('click', ()=>{
   const input = document.getElementById('dailyTaskInput');
@@ -5936,6 +6116,7 @@ document.getElementById('unlockFavImportFile').addEventListener('change', (e)=>{
   e.target.value = '';
 });
 renderUnlockFavorites();
+renderUnlockClaimedLinks();
 
 (function restoreMood(){
   const n = parseInt(sessionStorage.getItem('lycaas_search_count') || '0', 10);
