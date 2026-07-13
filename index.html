@@ -1306,6 +1306,38 @@ const JOB_NAMES = {8:'Carpenter',9:'Blacksmith',10:'Armorer',11:'Goldsmith',12:'
 // Pricing is pinned to the Light data center — not user-configurable.
 const FIXED_WORLD = 'Light';
 
+// --- Lightweight, privacy-friendly usage tracking (GoatCounter) ---
+// No cookies, no personal data, nothing that needs a privacy policy — just
+// counts. This is off by default: set GOATCOUNTER_CODE below to your own
+// free site code (sign up at https://www.goatcounter.com/, ~2 minutes, no
+// credit card — your code is the "xxxx" in xxxx.goatcounter.com) to turn it
+// on. Until then the script is never even requested, so nothing 404s and
+// nothing breaks.
+//
+// Loading the script alone already reports basic pageviews. The two
+// trackEvent() calls sprinkled in below (one per window you open, one per
+// search performed anywhere in the tool) show up as separate named events
+// in your GoatCounter dashboard, which is the "which features are popular
+// with my friends" breakdown that was actually asked for — a full per-tab
+// search count would mean touching a dozen+ call sites for one extra layer
+// of detail that a casual friends-and-family project doesn't really need.
+const GOATCOUNTER_CODE = 'lycaa'; // lycaa.goatcounter.com — leave blank to turn tracking off
+function trackEvent(path, title){
+  try{
+    if (window.goatcounter && typeof window.goatcounter.count === 'function'){
+      window.goatcounter.count({ path, title: title || path, event: true });
+    }
+  }catch(e){ /* analytics failing silently should never break the actual app */ }
+}
+(function loadGoatCounter(){
+  if (!GOATCOUNTER_CODE) return;
+  const s = document.createElement('script');
+  s.async = true;
+  s.src = '//gc.zgo.at/count.js';
+  s.setAttribute('data-goatcounter', 'https://' + GOATCOUNTER_CODE + '.goatcounter.com/count');
+  document.head.appendChild(s);
+})();
+
 if (location.protocol === 'file:'){
   document.getElementById('fileWarning').classList.remove('hidden');
 }
@@ -1492,6 +1524,7 @@ function openWindow(id){
     }
     state[id] = Object.assign({}, saved, { open: true });
     saveWindowState(state);
+    trackEvent('open-' + id, 'Opened ' + id);
   }
   if (id === 'personalStats'){
     renderSlaveReport();
@@ -3911,6 +3944,7 @@ function bumpStat(key, by){
   stats[key] = (stats[key] || 0) + (by || 1);
   localStorage.setItem('lycaas_stats', JSON.stringify(stats));
   renderSlaveReport();
+  if (key === 'searches') trackEvent('search-performed', 'Search performed');
 }
 function renderSlaveReport(){
   const el = document.getElementById('slaveReportBody');
