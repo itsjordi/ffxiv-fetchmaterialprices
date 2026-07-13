@@ -402,6 +402,8 @@
     font-family:inherit; font-size:.7rem; padding:2px 7px; border-radius:10px; cursor:pointer; flex-shrink:0;
   }
   .task-remove:hover{border-color:var(--bad); color:var(--bad);}
+  .reminder-banner{border-color:var(--accent-dim) !important; border-width:2px !important;}
+  .reminder-banner-actions{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
   .char-result-card{
     display:flex; align-items:center; gap:10px; width:100%; text-align:left;
     background:var(--panel); border:1px solid var(--border); border-radius:4px;
@@ -605,7 +607,7 @@
       </div>
       <div class="panel info-feature-card">
         <h3 style="margin:0 0 4px;">✅ Daily Tasks</h3>
-        <p style="margin:0 0 8px;">A recurring checklist — roulettes, beast tribes, Wondrous Tails, whatever you grind. Dailies uncheck themselves at the daily reset, weeklies at the weekly reset.</p>
+        <p style="margin:0 0 8px;">A recurring checklist — roulettes, beast tribes, Wondrous Tails, whatever you grind. Dailies uncheck themselves at the daily reset, weeklies at the weekly reset. Optional periodic reminders nudge you about anything still unfinished, with a snooze or skip-until-next-reset option.</p>
         <button class="secondary info-open-btn" data-open-win="dailyTasks">Open →</button>
       </div>
       <div class="panel info-feature-card">
@@ -614,7 +616,7 @@
         <button class="secondary info-open-btn" data-open-win="todo">Open →</button>
       </div>
 
-      <p class="recipe-meta" style="margin-bottom:0;">Also worth knowing: the 🌍 button next to this one sets your home world, the basket floats in the top-right corner, and there's a dark mode toggle right here too — all three stay out of the way of your windows. Press <b>Ctrl+K</b> (<b>⌘K</b> on Mac) anywhere to pull up a quick search that jumps straight to a window, a saved character, a favorite, or a to-do item.</p>
+      <p class="recipe-meta" style="margin-bottom:0;">Also worth knowing: the 🌍 button next to this one sets your home world, the basket floats in the top-right corner, and there's a dark mode toggle right here too — all three stay out of the way of your windows. Press <b>Ctrl+K</b> (<b>⌘K</b> on Mac) anywhere to pull up a quick search that jumps straight to a window, a saved character, a favorite, or a to-do item. And Personal Stats has a "Backup Everything" button that exports (or restores) every bit of data this tool remembers, in one file.</p>
     </div>
   </div>
 
@@ -1219,6 +1221,22 @@
       </div>
       <div class="row"><button id="dailyTaskAddBtn">Add task</button></div>
     </div>
+
+    <div class="panel">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="dailyReminderEnabledToggle">
+        <span>🔔 Remind me about unfinished tasks</span>
+      </label>
+      <div class="row" style="align-items:center; margin-top:6px;">
+        <span class="recipe-meta" style="margin:0;">Every</span>
+        <input type="number" id="dailyReminderIntervalInput" min="5" max="240" step="5" value="60" style="width:70px; padding:4px 8px; background:var(--paper); border:1px solid var(--border); color:var(--ink); border-radius:2px; font-family:inherit;">
+        <span class="recipe-meta" style="margin:0;">minutes, while this tab stays open.</span>
+        <button class="secondary" id="dailyReminderTestBtn" style="margin-left:auto;">Test reminder now</button>
+      </div>
+    </div>
+
+    <div id="dailyReminderBanner" class="panel reminder-banner hidden"></div>
+
     <div class="panel" id="dailyTasksBody"></div>
   </div>
 
@@ -1267,6 +1285,17 @@
       <h3 style="margin-top:0;">Assorted Nonsense</h3>
       <p class="recipe-meta">100% fictional. Derived from your real numbers above so they at least grow with you.</p>
       <div id="funStatsBody"></div>
+    </div>
+
+    <div class="panel" id="backupPanel">
+      <h3 style="margin-top:0;">Backup Everything</h3>
+      <p class="recipe-meta">Everything this tool remembers — favorites, saved characters, the watchlist, daily/to-do tasks, your world and theme settings, window layout — lives only in this browser. One file, one click, covers all of it, instead of exporting each tab separately.</p>
+      <div class="row">
+        <button id="backupExportBtn">Export everything</button>
+        <button id="backupImportBtn" class="secondary">Import everything</button>
+        <input type="file" id="backupImportFile" accept="application/json,.json" class="hidden">
+      </div>
+      <p class="recipe-meta" style="margin-bottom:0;">Importing overwrites matching data in this browser and reloads the page — export a fresh backup first if you're not sure.</p>
     </div>
   </div>
 </div>
@@ -4385,6 +4414,43 @@ function downloadTextFile(filename, content, mime){
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
 
+// --- Full backup: every per-tab export above (Glamour favorites, Unlockables
+// favorites, saved characters, the Watchlist) only bundles its own data.
+// This scoops up EVERY key this app has ever written to localStorage — all
+// of them share the "lycaas_" prefix — so one file covers favorites, saved
+// characters, the watchlist, daily/to-do tasks, world/theme settings, window
+// layout, and recent-search lists alike, including anything added after this
+// was written (it doesn't hardcode a key list, just scans the prefix).
+function exportAllData(){
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++){
+    const key = localStorage.key(i);
+    if (key && key.indexOf('lycaas_') === 0) data[key] = localStorage.getItem(key);
+  }
+  if (!Object.keys(data).length){ alert('Nothing saved in this browser yet — nothing to back up.'); return; }
+  const payload = { exportedFrom: 'Lycaa\'s Slave', exportedAt: new Date().toISOString(), kind: 'full-backup', data };
+  downloadTextFile('lycaas-full-backup.json', JSON.stringify(payload, null, 2), 'application/json');
+}
+function importAllDataFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      const data = (parsed && parsed.data && typeof parsed.data === 'object') ? parsed.data : null;
+      if (!data) throw new Error('not a recognizable full-backup file');
+      const keys = Object.keys(data).filter(k => k.indexOf('lycaas_') === 0);
+      if (!keys.length) throw new Error('backup file has no recognizable data');
+      const ok = confirm('This will overwrite this browser\'s current data for ' + keys.length + ' saved item(s) — favorites, tasks, watchlist, settings, and more — with what\'s in this backup file, then reload the page. Continue?');
+      if (!ok) return;
+      keys.forEach(k => localStorage.setItem(k, data[k]));
+      location.reload();
+    }catch(e){
+      alert('That doesn\'t look like a Lycaa\'s Slave backup file (' + e.message + ').');
+    }
+  };
+  reader.readAsText(file);
+}
+
 function exportWatchlist(){
   const list = loadWatchlist();
   if (!list.length){ alert('Watchlist is empty — nothing to export yet.'); return; }
@@ -5174,6 +5240,101 @@ function renderDailyTasks(){
   el.querySelectorAll('[data-remove-id]').forEach(btn => btn.addEventListener('click', ()=>removeDailyTask(btn.dataset.removeId)));
 }
 
+// --- Daily Tasks reminders: a periodic, friendly "hey, have you done this?"
+// while the tab stays open — same beep + Notification pattern the Watchlist's
+// price alerts already use, just pointed at unfinished tasks instead of gil.
+// "Skip until next reset" doesn't mark the task done, it just silences
+// reminders for it until its own next reset boundary rolls around (so it
+// naturally stops nagging about something you've already decided to skip
+// today, without lying about whether you actually did it).
+const TASK_REMINDER_INTROS = [
+  'Hey, have you done this yet?',
+  'Friendly nudge from the slave:',
+  'Still open on your list —',
+  'The slave noticed this one\'s still unchecked:',
+  'Gentle poke:',
+];
+let dailyReminderTimer = null;
+function loadDailyReminderSettings(){
+  return {
+    enabled: localStorage.getItem('lycaas_daily_reminders_enabled') === 'true',
+    intervalMin: Math.min(240, Math.max(5, parseInt(localStorage.getItem('lycaas_daily_reminder_interval_min') || '60', 10) || 60)),
+  };
+}
+function saveDailyReminderSettings(enabled, intervalMin){
+  localStorage.setItem('lycaas_daily_reminders_enabled', enabled ? 'true' : 'false');
+  localStorage.setItem('lycaas_daily_reminder_interval_min', String(intervalMin));
+}
+function nextDailyResetBoundary(){ return ffxivDailyResetBoundary() + 24 * 3600 * 1000; }
+function nextWeeklyResetBoundary(){ return ffxivWeeklyResetBoundary() + 7 * 24 * 3600 * 1000; }
+function isTaskSnoozed(t){ return !!(t.snoozedUntil && t.snoozedUntil > Date.now()); }
+function pickReminderCandidate(){
+  const tasks = loadDailyTasks(); // already applies resets, so "done" here is genuinely current
+  const eligible = tasks.filter(t => !t.done && !isTaskSnoozed(t));
+  if (!eligible.length) return null;
+  return eligible[Math.floor(Math.random() * eligible.length)];
+}
+function notifyDailyReminder(task){
+  try{
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    new Notification('Lycaa\'s Slave — task reminder', { body: 'Still open: ' + task.text });
+  }catch(e){ /* notifications aren't available everywhere */ }
+}
+function showDailyReminderBanner(task){
+  const el = document.getElementById('dailyReminderBanner');
+  if (!el) return;
+  const intro = TASK_REMINDER_INTROS[Math.floor(Math.random() * TASK_REMINDER_INTROS.length)];
+  el.classList.remove('hidden');
+  el.innerHTML = `
+    <p style="margin:0 0 4px; font-weight:700; color:var(--accent);">🔔 ${intro}</p>
+    <p style="margin:0;">${task.text}</p>
+    <div class="reminder-banner-actions">
+      <button type="button" id="reminderMarkDoneBtn">✓ Mark done</button>
+      <button type="button" class="secondary" id="reminderSnoozeBtn">💤 Snooze (ask again later)</button>
+      <button type="button" class="secondary" id="reminderSkipBtn">⏭ Skip until next reset</button>
+      <button type="button" class="secondary" id="reminderDismissBtn">Dismiss</button>
+    </div>
+  `;
+  document.getElementById('reminderMarkDoneBtn').addEventListener('click', ()=>{
+    toggleDailyTask(task.id);
+    el.classList.add('hidden');
+  });
+  document.getElementById('reminderSnoozeBtn').addEventListener('click', ()=>{
+    el.classList.add('hidden'); // no state change — it'll just come up again next interval
+  });
+  document.getElementById('reminderSkipBtn').addEventListener('click', ()=>{
+    const tasks = loadDailyTasks();
+    const t = tasks.find(x => x.id === task.id);
+    if (t) t.snoozedUntil = t.type === 'weekly' ? nextWeeklyResetBoundary() : nextDailyResetBoundary();
+    saveDailyTasks(tasks);
+    renderDailyTasks();
+    el.classList.add('hidden');
+  });
+  document.getElementById('reminderDismissBtn').addEventListener('click', ()=>{
+    el.classList.add('hidden');
+  });
+}
+function checkDailyReminders(){
+  const task = pickReminderCandidate();
+  if (!task) return;
+  showDailyReminderBanner(task);
+  playAlertBeep();
+  notifyDailyReminder(task);
+}
+async function startDailyReminders(){
+  if (dailyReminderTimer) return;
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default'){
+    try{ await Notification.requestPermission(); }catch(e){}
+  }
+  const { intervalMin } = loadDailyReminderSettings();
+  dailyReminderTimer = setInterval(checkDailyReminders, intervalMin * 60 * 1000);
+}
+function stopDailyReminders(){
+  if (dailyReminderTimer){ clearInterval(dailyReminderTimer); dailyReminderTimer = null; }
+  const el = document.getElementById('dailyReminderBanner');
+  if (el) el.classList.add('hidden');
+}
+
 // --- To-Do: freeform game goals, no resets — just add, check off, remove. ---
 function loadTodoList(){
   try{ const l = JSON.parse(localStorage.getItem('lycaas_todo_list') || '[]'); return Array.isArray(l) ? l : []; }
@@ -5376,6 +5537,14 @@ document.addEventListener('keydown', (e)=>{
   }
 });
 
+document.getElementById('backupExportBtn').addEventListener('click', exportAllData);
+document.getElementById('backupImportBtn').addEventListener('click', ()=>document.getElementById('backupImportFile').click());
+document.getElementById('backupImportFile').addEventListener('change', (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if (file) importAllDataFile(file);
+  e.target.value = '';
+});
+
 document.getElementById('charLookBtn').addEventListener('click', searchCharacters);
 document.getElementById('charLookNameInput').addEventListener('keydown', e=>{ if (e.key === 'Enter') searchCharacters(); });
 document.getElementById('charLookWorldInput').addEventListener('keydown', e=>{ if (e.key === 'Enter') searchCharacters(); });
@@ -5396,6 +5565,27 @@ document.getElementById('dailyTaskAddBtn').addEventListener('click', ()=>{
   input.focus();
 });
 document.getElementById('dailyTaskInput').addEventListener('keydown', e=>{ if (e.key === 'Enter') document.getElementById('dailyTaskAddBtn').click(); });
+
+(function initDailyReminderControls(){
+  const settings = loadDailyReminderSettings();
+  const toggle = document.getElementById('dailyReminderEnabledToggle');
+  const intervalInput = document.getElementById('dailyReminderIntervalInput');
+  toggle.checked = settings.enabled;
+  intervalInput.value = settings.intervalMin;
+  if (settings.enabled) startDailyReminders();
+  toggle.addEventListener('change', ()=>{
+    const mins = Math.min(240, Math.max(5, parseInt(intervalInput.value, 10) || 60));
+    saveDailyReminderSettings(toggle.checked, mins);
+    if (toggle.checked) startDailyReminders(); else stopDailyReminders();
+  });
+  intervalInput.addEventListener('change', ()=>{
+    const mins = Math.min(240, Math.max(5, parseInt(intervalInput.value, 10) || 60));
+    intervalInput.value = mins;
+    saveDailyReminderSettings(toggle.checked, mins);
+    if (toggle.checked){ stopDailyReminders(); startDailyReminders(); }
+  });
+  document.getElementById('dailyReminderTestBtn').addEventListener('click', checkDailyReminders);
+})();
 
 document.getElementById('todoAddBtn').addEventListener('click', ()=>{
   const input = document.getElementById('todoInput');
