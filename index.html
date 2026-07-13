@@ -155,6 +155,25 @@
   .launcher-btn:hover{border-color:var(--border); background:var(--panel2);}
   .launcher-btn.open{color:var(--accent); font-weight:700; background:var(--panel2); border-color:var(--border);}
   .launcher-reset-btn{border-top:1px dashed var(--border); margin-top:4px; padding-top:10px; color:var(--dim); font-size:.85rem;}
+
+  /* Row wrapper for a launcher entry that also has a close-from-sidebar button
+     (only the per-window toggle buttons get one — presets/reset don't). The
+     close ✕ only becomes visible/clickable once its window is actually open,
+     so the sidebar doesn't get cluttered with dead ✕s for closed windows. */
+  .launcher-row{display:flex; align-items:stretch; gap:2px;}
+  .launcher-row .launcher-btn{flex:1; min-width:0;}
+  .launcher-row .launcher-btn span{overflow:hidden; text-overflow:ellipsis;}
+  .launcher-close-x{
+    display:flex; align-items:center; justify-content:center;
+    background:transparent; border:1px solid transparent; color:var(--dim);
+    font-size:.85rem; line-height:1; width:0; padding:8px 0; border-radius:4px;
+    cursor:pointer; opacity:0; pointer-events:none; overflow:hidden;
+    transition:opacity .1s ease, width .1s ease;
+  }
+  .launcher-row .launcher-btn.open ~ .launcher-close-x{
+    width:26px; padding:8px 6px; opacity:1; pointer-events:auto;
+  }
+  .launcher-close-x:hover{color:var(--bad); background:var(--panel2); border-color:var(--border);}
   .launcher-divider{
     border-top:1px dashed var(--border); margin-top:8px; padding:8px 0 2px;
     font-size:.7rem; text-transform:uppercase; letter-spacing:.5px; color:var(--dim); font-style:italic;
@@ -416,6 +435,11 @@
   }
   .cactpot-cell:hover{border-color:var(--accent-dim);}
   .cactpot-cell.revealed{color:var(--accent); border-color:var(--accent-dim); background:var(--panel2);}
+  .cactpot-cell.recommended{
+    border-color:var(--good); background:var(--good); color:var(--paper);
+    box-shadow:0 0 0 2px var(--good) inset;
+  }
+  .cactpot-cell.recommended:hover{opacity:.9;}
   .cactpot-picker-numbers{display:flex; flex-wrap:wrap; gap:6px;}
   .cactpot-num-btn{width:38px; height:38px; padding:0; font-size:1rem; font-weight:700;}
   tr.cactpot-best-line td{color:var(--good); font-weight:700;}
@@ -547,18 +571,18 @@
   </div>
 
   <div class="window-launcher" id="windowLauncher">
-    <button class="launcher-btn" type="button" data-win="craft">📦 <span>Craft Cost</span></button>
-    <button class="launcher-btn" type="button" data-win="glamour">👗 <span>Glamour</span></button>
-    <button class="launcher-btn" type="button" data-win="lookup">🔍 <span>Item Lookup</span></button>
-    <button class="launcher-btn" type="button" data-win="shopping">🛒 <span>Shopping List</span></button>
-    <button class="launcher-btn" type="button" data-win="profit">💰 <span>Profit Calc</span></button>
-    <button class="launcher-btn" type="button" data-win="watch">📊 <span>Watchlist</span></button>
-    <button class="launcher-btn" type="button" data-win="unlockables">🐴 <span>Unlockables</span></button>
-    <button class="launcher-btn" type="button" data-win="personalStats">📜 <span>Personal Stats</span></button>
-    <button class="launcher-btn" type="button" data-win="characterLook">🧑‍🎤 <span>Character Look</span></button>
-    <button class="launcher-btn" type="button" data-win="dailyTasks">✅ <span>Daily Tasks</span></button>
-    <button class="launcher-btn" type="button" data-win="todo">📝 <span>To-Do</span></button>
-    <button class="launcher-btn" type="button" data-win="goldSaucer">🎰 <span>Gold Saucer</span></button>
+    <div class="launcher-row"><button class="launcher-btn" type="button" data-win="craft">📦 <span>Craft Cost</span></button><button class="launcher-close-x" type="button" data-win="craft" title="Close">✕</button></div>
+    <div class="launcher-row"><button class="launcher-btn" type="button" data-win="glamour">👗 <span>Glamour</span></button><button class="launcher-close-x" type="button" data-win="glamour" title="Close">✕</button></div>
+    <div class="launcher-row"><button class="launcher-btn" type="button" data-win="lookup">🔍 <span>Item Lookup</span></button><button class="launcher-close-x" type="button" data-win="lookup" title="Close">✕</button></div>
+    <div class="launcher-row"><button class="launcher-btn" type="button" data-win="shopping">🛒 <span>Shopping List</span></button><button class="launcher-close-x" type="button" data-win="shopping" title="Close">✕</button></div>
+    <div class="launcher-row"><button class="launcher-btn" type="button" data-win="profit">💰 <span>Profit Calc</span></button><button class="launcher-close-x" type="button" data-win="profit" title="Close">✕</button></div>
+    <div class="launcher-row"><button class="launcher-btn" type="button" data-win="watch">📊 <span>Watchlist</span></button><button class="launcher-close-x" type="button" data-win="watch" title="Close">✕</button></div>
+    <div class="launcher-row"><button class="launcher-btn" type="button" data-win="unlockables">🐴 <span>Unlockables</span></button><button class="launcher-close-x" type="button" data-win="unlockables" title="Close">✕</button></div>
+    <div class="launcher-row"><button class="launcher-btn" type="button" data-win="personalStats">📜 <span>Personal Stats</span></button><button class="launcher-close-x" type="button" data-win="personalStats" title="Close">✕</button></div>
+    <div class="launcher-row"><button class="launcher-btn" type="button" data-win="characterLook">🧑‍🎤 <span>Character Look</span></button><button class="launcher-close-x" type="button" data-win="characterLook" title="Close">✕</button></div>
+    <div class="launcher-row"><button class="launcher-btn" type="button" data-win="dailyTasks">✅ <span>Daily Tasks</span></button><button class="launcher-close-x" type="button" data-win="dailyTasks" title="Close">✕</button></div>
+    <div class="launcher-row"><button class="launcher-btn" type="button" data-win="todo">📝 <span>To-Do</span></button><button class="launcher-close-x" type="button" data-win="todo" title="Close">✕</button></div>
+    <div class="launcher-row"><button class="launcher-btn" type="button" data-win="goldSaucer">🎰 <span>Gold Saucer</span></button><button class="launcher-close-x" type="button" data-win="goldSaucer" title="Close">✕</button></div>
     <div class="launcher-divider">Presets</div>
     <button class="launcher-btn" type="button" data-preset="glamourFitting" title="Glamour + Craft Cost + Shopping List, arranged side by side">👗 <span>Glamour Fitting</span></button>
     <button class="launcher-btn" type="button" data-preset="craftingDesk" title="Craft Cost + Profit Calc + Shopping List, arranged side by side">📦 <span>Crafting Desk</span></button>
@@ -1720,6 +1744,12 @@ WINDOW_IDS.forEach(id => makeWindowDraggable(id));
 WINDOW_IDS.forEach(id => makeWindowResizable(id));
 document.querySelectorAll('.launcher-btn[data-win]').forEach(btn=>{
   btn.addEventListener('click', ()=>toggleWindow(btn.dataset.win));
+});
+document.querySelectorAll('.launcher-close-x[data-win]').forEach(btn=>{
+  // Sits next to the toggle button in the sidebar, not inside it, so no need
+  // to stopPropagation — but the window may already be closed (the button is
+  // just hidden via CSS in that case), so closeWindow() is called defensively.
+  btn.addEventListener('click', ()=>closeWindow(btn.dataset.win));
 });
 document.querySelectorAll('.launcher-btn[data-preset]').forEach(btn=>{
   btn.addEventListener('click', ()=>applyPreset(btn.dataset.preset));
@@ -4663,8 +4693,17 @@ function renderCactpotSolver(){
   const revealedCount = cactpotGrid.filter(v => v !== null).length;
   const remaining = cactpotRemainingDigitsFor(cactpotGrid);
 
+  // Computed up front (not just for the text line below) so the recommended
+  // cell can also be highlighted right on the grid itself — glancing at the
+  // board should be enough, the text is just there to explain why.
+  let recommendedCell = null;
+  if (revealedCount < 4 && remaining.length && cactpotSelectedCell === null){
+    const ranked = cactpotBestNextCell(cactpotGrid);
+    if (ranked.length) recommendedCell = ranked[0];
+  }
+
   const gridHtml = '<div class="cactpot-grid">' + cactpotGrid.map((v, i) => `
-    <button type="button" class="cactpot-cell${v !== null ? ' revealed' : ''}" data-cell-idx="${i}" title="${cactpotCellLabel(i)}">${v !== null ? v : '?'}</button>
+    <button type="button" class="cactpot-cell${v !== null ? ' revealed' : ''}${recommendedCell && recommendedCell.cell === i ? ' recommended' : ''}" data-cell-idx="${i}" title="${cactpotCellLabel(i)}${recommendedCell && recommendedCell.cell === i ? ' — recommended' : ''}">${v !== null ? v : '?'}</button>
   `).join('') + '</div>';
 
   let pickerHtml = '';
@@ -4691,12 +4730,8 @@ function renderCactpotSolver(){
   `).join('');
 
   let nextCellHtml = '';
-  if (revealedCount < 4 && remaining.length && cactpotSelectedCell === null){
-    const ranked = cactpotBestNextCell(cactpotGrid);
-    if (ranked.length){
-      const top = ranked[0];
-      nextCellHtml = '<p class="recipe-meta">Best cell to scratch next: <b>' + cactpotCellLabel(top.cell) + '</b> — expected best-line payout afterward: ' + fmt(Math.round(top.expectedBest)) + ' MGP.</p>';
-    }
+  if (recommendedCell){
+    nextCellHtml = '<p class="recipe-meta">Best cell to scratch next: <b>' + cactpotCellLabel(recommendedCell.cell) + '</b> (highlighted green above) — expected best-line payout afterward: ' + fmt(Math.round(recommendedCell.expectedBest)) + ' MGP.</p>';
   }
 
   el.innerHTML = `
