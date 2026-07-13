@@ -404,6 +404,21 @@
   .task-remove:hover{border-color:var(--bad); color:var(--bad);}
   .reminder-banner{border-color:var(--accent-dim) !important; border-width:2px !important;}
   .reminder-banner-actions{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .cactpot-grid{
+    display:grid; grid-template-columns:repeat(3, 64px); grid-template-rows:repeat(3, 64px);
+    gap:6px; margin-bottom:10px;
+  }
+  .cactpot-cell{
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem; font-weight:700; font-family:inherit;
+    background:var(--panel); border:2px solid var(--border); border-radius:6px;
+    color:var(--dim); cursor:pointer; padding:0;
+  }
+  .cactpot-cell:hover{border-color:var(--accent-dim);}
+  .cactpot-cell.revealed{color:var(--accent); border-color:var(--accent-dim); background:var(--panel2);}
+  .cactpot-picker-numbers{display:flex; flex-wrap:wrap; gap:6px;}
+  .cactpot-num-btn{width:38px; height:38px; padding:0; font-size:1rem; font-weight:700;}
+  tr.cactpot-best-line td{color:var(--good); font-weight:700;}
   .char-result-card{
     display:flex; align-items:center; gap:10px; width:100%; text-align:left;
     background:var(--panel); border:1px solid var(--border); border-radius:4px;
@@ -543,6 +558,7 @@
     <button class="launcher-btn" type="button" data-win="characterLook">🧑‍🎤 <span>Character Look</span></button>
     <button class="launcher-btn" type="button" data-win="dailyTasks">✅ <span>Daily Tasks</span></button>
     <button class="launcher-btn" type="button" data-win="todo">📝 <span>To-Do</span></button>
+    <button class="launcher-btn" type="button" data-win="goldSaucer">🎰 <span>Gold Saucer</span></button>
     <div class="launcher-divider">Presets</div>
     <button class="launcher-btn" type="button" data-preset="glamourFitting" title="Glamour + Craft Cost + Shopping List, arranged side by side">👗 <span>Glamour Fitting</span></button>
     <button class="launcher-btn" type="button" data-preset="craftingDesk" title="Craft Cost + Profit Calc + Shopping List, arranged side by side">📦 <span>Crafting Desk</span></button>
@@ -614,6 +630,11 @@
         <h3 style="margin:0 0 4px;">📝 To-Do</h3>
         <p style="margin:0 0 8px;">Freeform goals that don't reset — "Eureka for the Anemos gear," "finish the Bozja resistance record," whatever. Add it, check it off when it's done.</p>
         <button class="secondary info-open-btn" data-open-win="todo">Open →</button>
+      </div>
+      <div class="panel info-feature-card">
+        <h3 style="margin:0 0 4px;">🎰 Gold Saucer</h3>
+        <p style="margin:0 0 8px;">Mini Cactpot solver — enter what you've scratched off and it works out the expected MGP for every line (row, column, diagonal), plus which cell to reveal next for the best odds.</p>
+        <button class="secondary info-open-btn" data-open-win="goldSaucer">Open →</button>
       </div>
 
       <p class="recipe-meta" style="margin-bottom:0;">Also worth knowing: the 🌍 button next to this one sets your home world, the basket floats in the top-right corner, and there's a dark mode toggle right here too — all three stay out of the way of your windows. Press <b>Ctrl+K</b> (<b>⌘K</b> on Mac) anywhere to pull up a quick search that jumps straight to a window, a saved character, a favorite, or a to-do item. And Personal Stats has a "Backup Everything" button that exports (or restores) every bit of data this tool remembers, in one file.</p>
@@ -1261,6 +1282,29 @@
     </div>
     <div class="panel" id="todoListBody"></div>
   </div>
+
+  <div id="tabGoldSaucer" class="tab-panel hidden">
+    <div class="window-titlebar" data-win="goldSaucer">
+      <span class="window-title">🎰 Gold Saucer</span>
+      <button class="window-close-btn" type="button" data-win="goldSaucer" title="Close">✕</button>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0;">Mini Cactpot Solver</h3>
+      <p class="recipe-meta" style="margin-top:0;">Enter numbers as you scratch them off — 1 comes free, then you choose 3 more (4 total) before picking a line. This works out the exact expected MGP for every row, column, and diagonal from the numbers still hidden, and highlights the best one. It's still a lottery — this maximizes your odds, it doesn't guarantee the jackpot.</p>
+    </div>
+    <div class="panel" id="cactpotBody"></div>
+    <div class="panel">
+      <button class="secondary" id="cactpotResetBtn">Reset ticket</button>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0;">Payout Table</h3>
+      <p class="recipe-meta" style="margin-top:0;">Official Mini Cactpot payouts, straight from the Gold Saucer.</p>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Sum</th><th>MGP</th></tr></thead>
+        <tbody id="cactpotPayoutTableBody"></tbody>
+      </table></div>
+    </div>
+  </div>
   </div>
 
   <div id="personalStatsPage" class="tab-panel hidden">
@@ -1447,7 +1491,7 @@ document.getElementById('themeToggleBtn').addEventListener('click', ()=>{
 // open at once; the left-side launcher sidebar opens/focuses them, and each
 // window's own titlebar drags it around or closes it. On narrow screens
 // (<900px) windows fall back to plain stacked full-width panels instead. ---
-const WINDOW_IDS = ['craft', 'lookup', 'shopping', 'profit', 'watch', 'glamour', 'unlockables', 'personalStats', 'characterLook', 'dailyTasks', 'todo'];
+const WINDOW_IDS = ['craft', 'lookup', 'shopping', 'profit', 'watch', 'glamour', 'unlockables', 'personalStats', 'characterLook', 'dailyTasks', 'todo', 'goldSaucer'];
 function windowElId(id){
   return id === 'personalStats' ? 'personalStatsPage' : ('tab' + id.charAt(0).toUpperCase() + id.slice(1));
 }
@@ -4485,6 +4529,196 @@ function importAllDataFile(file){
   reader.readAsText(file);
 }
 
+// --- Gold Saucer: Mini Cactpot solver. Payout table verified against the
+// official rules (ffxiv.consolegameswiki.com/wiki/Cactpot) — a ticket is a
+// permutation of 1-9 across 9 cells; you get 1 free reveal plus up to 3 of
+// your own choosing (4 total) before blind-picking one of 8 lines, paid by
+// that line's sum.
+//
+// The maths: since the ticket is a uniformly random permutation, the hidden
+// cells belonging to any one line receive a uniformly random SUBSET (order
+// doesn't matter for a sum) of whatever digits are still unaccounted for.
+// So the expected payout for a line only needs averaging over
+// C(remaining pool size, hidden cells in that line) combinations — never
+// the full 9! permutations of the whole ticket — which stays fast even
+// with nothing revealed yet (worst case C(9,3) = 84 combinations per line).
+const CACTPOT_LINES = [
+  [0,1,2], [3,4,5], [6,7,8], // rows
+  [0,3,6], [1,4,7], [2,5,8], // columns
+  [0,4,8], [2,4,6],          // diagonals
+];
+const CACTPOT_LINE_LABELS = ['Row 1','Row 2','Row 3','Column 1','Column 2','Column 3','Diagonal ↘','Diagonal ↙'];
+const CACTPOT_PAYOUTS = {6:10000,7:36,8:720,9:360,10:80,11:252,12:108,13:72,14:54,15:180,16:72,17:180,18:119,19:36,20:306,21:1080,22:144,23:1800,24:3600};
+
+let cactpotGrid = new Array(9).fill(null);
+let cactpotSelectedCell = null;
+
+function cactpotRemainingDigitsFor(grid){
+  const used = new Set(grid.filter(v => v !== null));
+  const out = [];
+  for (let d = 1; d <= 9; d++){ if (!used.has(d)) out.push(d); }
+  return out;
+}
+// Every k-combination of a small array — grid pools never exceed 9 items,
+// so a plain recursive approach is more than fast enough here.
+function combinations(arr, k){
+  const results = [];
+  function helper(start, combo){
+    if (combo.length === k){ results.push(combo.slice()); return; }
+    for (let i = start; i < arr.length; i++){
+      combo.push(arr[i]);
+      helper(i + 1, combo);
+      combo.pop();
+    }
+  }
+  helper(0, []);
+  return results;
+}
+function cactpotLineExpectedValue(grid, lineIdx){
+  const cells = CACTPOT_LINES[lineIdx];
+  const known = cells.filter(i => grid[i] !== null).map(i => grid[i]);
+  const hiddenCount = cells.length - known.length;
+  const knownSum = known.reduce((a,b) => a + b, 0);
+  if (hiddenCount === 0){
+    return { ev: CACTPOT_PAYOUTS[knownSum] || 0, sum: knownSum, certain: true };
+  }
+  const pool = cactpotRemainingDigitsFor(grid);
+  const combos = combinations(pool, hiddenCount);
+  if (!combos.length) return { ev: 0, sum: null, certain: false };
+  let total = 0;
+  combos.forEach(combo => {
+    const sum = knownSum + combo.reduce((a,b) => a + b, 0);
+    total += (CACTPOT_PAYOUTS[sum] || 0);
+  });
+  return { ev: total / combos.length, sum: null, certain: false };
+}
+function cactpotAllLineValues(grid){
+  return CACTPOT_LINES.map((cells, idx) => Object.assign(
+    { idx, label: CACTPOT_LINE_LABELS[idx] },
+    cactpotLineExpectedValue(grid, idx)
+  ));
+}
+// "Which cell should I scratch next?" — averages the resulting best-line EV
+// over every value a hidden cell could turn out to be (each remaining digit
+// equally likely), so it accounts for information value, not just raw
+// current EV. Only meaningful with reveals still left (max 4 total).
+function cactpotBestNextCell(grid){
+  const hiddenIdx = grid.map((v, i) => v === null ? i : null).filter(i => i !== null);
+  if (!hiddenIdx.length) return [];
+  const pool = cactpotRemainingDigitsFor(grid);
+  return hiddenIdx.map(i => {
+    let total = 0;
+    pool.forEach(v => {
+      const trial = grid.slice();
+      trial[i] = v;
+      const best = Math.max(...cactpotAllLineValues(trial).map(l => l.ev));
+      total += best;
+    });
+    return { cell: i, expectedBest: total / pool.length };
+  }).sort((a, b) => b.expectedBest - a.expectedBest);
+}
+function cactpotCellLabel(i){
+  return 'row ' + (Math.floor(i / 3) + 1) + ', column ' + ((i % 3) + 1);
+}
+function onCactpotCellClick(i){
+  if (cactpotGrid[i] !== null){
+    cactpotGrid[i] = null;
+    cactpotSelectedCell = null;
+    renderCactpotSolver();
+    return;
+  }
+  const revealedCount = cactpotGrid.filter(v => v !== null).length;
+  if (revealedCount >= 4){
+    alert('Mini Cactpot only lets you reveal 4 numbers total (1 free + 3 of your choice) before picking a line — clear one first if you need to fix a mistake.');
+    return;
+  }
+  cactpotSelectedCell = i;
+  renderCactpotSolver();
+}
+function setCactpotCellValue(v){
+  if (cactpotSelectedCell === null) return;
+  cactpotGrid[cactpotSelectedCell] = v;
+  cactpotSelectedCell = null;
+  renderCactpotSolver();
+}
+function cancelCactpotPick(){
+  cactpotSelectedCell = null;
+  renderCactpotSolver();
+}
+function resetCactpotGrid(){
+  cactpotGrid = new Array(9).fill(null);
+  cactpotSelectedCell = null;
+  renderCactpotSolver();
+}
+function renderCactpotPayoutTable(){
+  const el = document.getElementById('cactpotPayoutTableBody');
+  if (!el) return;
+  el.innerHTML = Object.keys(CACTPOT_PAYOUTS).map(Number).sort((a,b)=>a-b).map(sum => (
+    '<tr><td>' + sum + '</td><td>' + fmt(CACTPOT_PAYOUTS[sum]) + ' MGP</td></tr>'
+  )).join('');
+}
+function renderCactpotSolver(){
+  const el = document.getElementById('cactpotBody');
+  if (!el) return;
+  const revealedCount = cactpotGrid.filter(v => v !== null).length;
+  const remaining = cactpotRemainingDigitsFor(cactpotGrid);
+
+  const gridHtml = '<div class="cactpot-grid">' + cactpotGrid.map((v, i) => `
+    <button type="button" class="cactpot-cell${v !== null ? ' revealed' : ''}" data-cell-idx="${i}" title="${cactpotCellLabel(i)}">${v !== null ? v : '?'}</button>
+  `).join('') + '</div>';
+
+  let pickerHtml = '';
+  if (cactpotSelectedCell !== null){
+    pickerHtml = `
+      <div class="panel cactpot-picker" style="margin-bottom:10px;">
+        <p class="recipe-meta" style="margin:0 0 6px;">What number is shown in ${cactpotCellLabel(cactpotSelectedCell)}?</p>
+        <div class="cactpot-picker-numbers">
+          ${remaining.map(v => '<button type="button" class="cactpot-num-btn" data-val="' + v + '">' + v + '</button>').join('')}
+        </div>
+        <button type="button" class="secondary" id="cactpotPickerCancelBtn" style="margin-top:8px;">Cancel</button>
+      </div>
+    `;
+  }
+
+  const lines = cactpotAllLineValues(cactpotGrid);
+  const bestEv = Math.max(...lines.map(l => l.ev));
+  const rowsHtml = lines.slice().sort((a, b) => b.ev - a.ev).map(l => `
+    <tr class="${l.ev === bestEv ? 'cactpot-best-line' : ''}">
+      <td>${l.label}${l.ev === bestEv ? ' 👑' : ''}</td>
+      <td>${l.certain ? l.sum : '—'}</td>
+      <td>${fmt(Math.round(l.ev))} MGP</td>
+    </tr>
+  `).join('');
+
+  let nextCellHtml = '';
+  if (revealedCount < 4 && remaining.length && cactpotSelectedCell === null){
+    const ranked = cactpotBestNextCell(cactpotGrid);
+    if (ranked.length){
+      const top = ranked[0];
+      nextCellHtml = '<p class="recipe-meta">Best cell to scratch next: <b>' + cactpotCellLabel(top.cell) + '</b> — expected best-line payout afterward: ' + fmt(Math.round(top.expectedBest)) + ' MGP.</p>';
+    }
+  }
+
+  el.innerHTML = `
+    ${gridHtml}
+    <p class="recipe-meta">Revealed ${revealedCount} of 4 (1 free + up to 3 you choose) — click a hidden cell to enter its number, click a revealed cell to clear it.</p>
+    ${pickerHtml}
+    ${nextCellHtml}
+    <div class="table-scroll"><table>
+      <thead><tr><th>Line</th><th>Sum</th><th>Expected MGP</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table></div>
+  `;
+  el.querySelectorAll('.cactpot-cell').forEach(btn => {
+    btn.addEventListener('click', ()=>onCactpotCellClick(parseInt(btn.dataset.cellIdx, 10)));
+  });
+  el.querySelectorAll('.cactpot-num-btn').forEach(btn => {
+    btn.addEventListener('click', ()=>setCactpotCellValue(parseInt(btn.dataset.val, 10)));
+  });
+  const cancelBtn = document.getElementById('cactpotPickerCancelBtn');
+  if (cancelBtn) cancelBtn.addEventListener('click', cancelCactpotPick);
+}
+
 function exportWatchlist(){
   const list = loadWatchlist();
   if (!list.length){ alert('Watchlist is empty — nothing to export yet.'); return; }
@@ -5441,6 +5675,7 @@ const WINDOW_META = {
   characterLook: { emoji:'🧑‍🎤', label:'Character Look' },
   dailyTasks: { emoji:'✅', label:'Daily Tasks' },
   todo: { emoji:'📝', label:'To-Do' },
+  goldSaucer: { emoji:'🎰', label:'Gold Saucer' },
 };
 const PRESET_META = {
   glamourFitting: { emoji:'👗', label:'Glamour Fitting layout' },
@@ -5570,6 +5805,10 @@ document.addEventListener('keydown', (e)=>{
     else closePalette();
   }
 });
+
+document.getElementById('cactpotResetBtn').addEventListener('click', resetCactpotGrid);
+renderCactpotPayoutTable();
+renderCactpotSolver();
 
 document.getElementById('backupExportBtn').addEventListener('click', exportAllData);
 document.getElementById('backupImportBtn').addEventListener('click', ()=>document.getElementById('backupImportFile').click());
