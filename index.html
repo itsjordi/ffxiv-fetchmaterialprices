@@ -736,7 +736,7 @@
       </div>
       <div class="panel info-feature-card">
         <h3 style="margin:0 0 4px;">⏱️ Gil/Hour</h3>
-        <p style="margin:0 0 8px;">Say how many you want to make or gather — for craftable items the slave follows the entire recipe chain down to raw materials (crafted sub-ingredients get expanded too) and totals up exactly how much of everything you need. Sale price stays current from the Light data center; add your gather time whenever you know it to see gil/hour.</p>
+        <p style="margin:0 0 8px;">Say how many you want to make or gather — for craftable items the slave follows the entire recipe chain down to raw materials (crafted sub-ingredients get expanded too) and totals up exactly how much of everything you need. Sale price stays current from the Light data center; add your gather time whenever you know it to see gil/hour. Each method can also check its recent sale volume, since price alone doesn't tell you whether anyone's actually buying.</p>
         <button class="secondary info-open-btn" data-open-win="gilHour">Open →</button>
       </div>
 
@@ -1417,7 +1417,7 @@
       <button class="window-close-btn" type="button" data-win="gilHour" title="Close">✕</button>
     </div>
     <div class="panel">
-      <p class="recipe-meta" style="margin-top:0;">Say how many you want to make (or gather and sell raw) — if it's craftable, the slave pulls the real recipe and follows the whole chain down to raw materials (if what you need is itself crafted from something else, that gets expanded too, all the way to what you'd actually gather). Sale price stays current from the Light data center. Your gather time is the one thing nobody but you knows, so it's optional here — fill it in whenever you actually find out, and gil/hour appears once you do.</p>
+      <p class="recipe-meta" style="margin-top:0;">Say how many you want to make (or gather and sell raw) — if it's craftable, the slave pulls the real recipe and follows the whole chain down to raw materials (if what you need is itself crafted from something else, that gets expanded too, all the way to what you'd actually gather). Sale price stays current from the Light data center. Your gather time is the one thing nobody but you knows, so it's optional here — fill it in whenever you actually find out, and gil/hour appears once you do. Each saved method also has a "Check sale volume" button — price alone can be misleading if barely anyone's actually buying it.</p>
       <div class="row">
         <div class="field" style="flex:1;">
           <label for="gilItemInput">Item you sell (name or wiki URL)</label>
@@ -5051,6 +5051,52 @@ function renderGilMaterialTreeHtml(nodes){
   }).join('') + '</ul>';
 }
 
+// --- Sale volume: price alone can be misleading — a listing at 22,000g
+// doesn't mean much if only two of them actually sell a week. This pulls
+// real recent sale history (same Universalis history endpoint the
+// Watchlist's own price sparkline already uses) and turns it into a rough
+// units/day rate, worked out from the actual gap between the oldest and
+// newest sale returned rather than assumed. In-memory only, not persisted —
+// a "how fast does this move" snapshot goes stale in a day or two anyway,
+// same reasoning as the Watchlist's own sale-history cache — and it's
+// fetched lazily per item on click rather than folded into "Refresh all
+// prices," so opening this tab with a dozen saved methods doesn't fire off
+// a dozen extra history requests nobody asked for yet.
+const gilVolumeCache = {};
+function gilVolumeLabel(perDay){
+  if (perDay == null) return '';
+  if (perDay >= 5) return ' — actively traded';
+  if (perDay >= 1) return ' — moderate turnover';
+  return ' — slow mover, may sit unsold a while';
+}
+async function checkGilSaleVolume(itemId){
+  if (gilVolumeCache[itemId] === 'loading') return;
+  gilVolumeCache[itemId] = 'loading';
+  renderGilMethods();
+  try{
+    const data = await fetchJson('https://universalis.app/api/v2/history/' + FIXED_WORLD + '/' + itemId + '?entriesToReturn=20', gilUI.log);
+    const entries = (data && data.entries) || [];
+    if (!entries.length){
+      gilVolumeCache[itemId] = { none: true };
+    } else {
+      const totalQty = entries.reduce((s, e) => s + (e.quantity || 1), 0);
+      const timestamps = entries.map(e => e.timestamp).filter(t => t != null);
+      const newest = Math.max.apply(null, timestamps);
+      const oldest = Math.min.apply(null, timestamps);
+      const spanDays = Math.max((newest - oldest) / 86400, 0);
+      // Less than half a day of real spread isn't enough to responsibly turn
+      // into a "per day" rate — report the raw count instead of a number
+      // that would just be an artifact of how bunched-up the sales happened
+      // to be.
+      const perDay = spanDays > 0.5 ? (totalQty / spanDays) : null;
+      gilVolumeCache[itemId] = { totalQty, entryCount: entries.length, spanDays, perDay };
+    }
+  }catch(e){
+    gilVolumeCache[itemId] = { error: e.message };
+  }
+  renderGilMethods();
+}
+
 function loadGilMethods(){
   try{ const l = JSON.parse(localStorage.getItem('lycaas_gil_methods') || '[]'); return Array.isArray(l) ? l : []; }
   catch(e){ return []; }
@@ -5310,6 +5356,25 @@ function renderGilMethods(){
       materialsHtml = '<p class="recipe-meta" style="margin:6px 0 2px;">Not craftable — gather and sell ' + m.targetQty + ' of these directly.</p>';
     }
     const timeLine = (m.minutesPerRound != null) ? (m.minutesPerRound + ' min') : 'time not set yet';
+
+    const vol = gilVolumeCache[m.itemId];
+    let volumeHtml;
+    if (!vol){
+      volumeHtml = '<button type="button" class="secondary gil-volume-btn" data-item-id="' + m.itemId + '" style="margin:2px 0 4px;">📈 Check sale volume</button>';
+    } else if (vol === 'loading'){
+      volumeHtml = '<p class="recipe-meta" style="margin:4px 0;">📈 Checking recent sale volume...</p>';
+    } else if (vol.error){
+      volumeHtml = '<p class="recipe-meta" style="margin:4px 0;">📈 Couldn\'t check sale volume (' + String(vol.error).replace(/</g, '&lt;') + ').</p>';
+    } else if (vol.none){
+      volumeHtml = '<p class="recipe-meta" style="margin:4px 0;">📈 No recent sales on record — could be genuinely low demand, or just not tracked yet.</p>';
+    } else {
+      const rateText = vol.perDay != null
+        ? ('~' + (vol.perDay >= 10 ? fmt(Math.round(vol.perDay)) : vol.perDay.toFixed(1)) + '/day' + gilVolumeLabel(vol.perDay))
+        : 'not enough spread yet to estimate a daily rate';
+      volumeHtml = '<p class="recipe-meta" style="margin:4px 0;">📈 Sale volume: ' + rateText
+        + ' <span style="opacity:.75;">(' + fmt(vol.totalQty) + ' sold across ' + vol.entryCount + ' sales, last ' + vol.spanDays.toFixed(1) + ' days)</span></p>';
+    }
+
     return `
       <div class="panel gil-method-card">
         <div class="row" style="justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
@@ -5319,6 +5384,7 @@ function renderGilMethods(){
         ${materialsHtml}
         ${safeNotes ? ('<p class="recipe-meta" style="margin:4px 0;">' + safeNotes + '</p>') : ''}
         <p class="recipe-meta" style="margin:4px 0;">${priceLine} · ${timeLine}</p>
+        ${volumeHtml}
         <div class="row" style="margin-top:8px;">
           <button type="button" class="secondary gil-edit-btn" data-id="${m.id}">Edit</button>
           <button type="button" class="secondary gil-remove-btn" data-id="${m.id}">Remove</button>
@@ -5327,6 +5393,9 @@ function renderGilMethods(){
       </div>
     `;
   }).join('');
+  el.querySelectorAll('.gil-volume-btn').forEach(btn => {
+    btn.addEventListener('click', ()=>checkGilSaleVolume(btn.dataset.itemId));
+  });
   el.querySelectorAll('.gil-edit-btn').forEach(btn => {
     btn.addEventListener('click', ()=>startEditGilMethod(btn.dataset.id));
   });
