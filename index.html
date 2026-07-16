@@ -736,7 +736,7 @@
       </div>
       <div class="panel info-feature-card">
         <h3 style="margin:0 0 4px;">⏱️ Gil/Hour</h3>
-        <p style="margin:0 0 8px;">Say how many you want to make or gather — for craftable items the slave pulls the real recipe and works out exactly how much material you need. Sale price stays current from the Light data center; add your gather time whenever you know it to see gil/hour.</p>
+        <p style="margin:0 0 8px;">Say how many you want to make or gather — for craftable items the slave follows the entire recipe chain down to raw materials (crafted sub-ingredients get expanded too) and totals up exactly how much of everything you need. Sale price stays current from the Light data center; add your gather time whenever you know it to see gil/hour.</p>
         <button class="secondary info-open-btn" data-open-win="gilHour">Open →</button>
       </div>
 
@@ -1417,7 +1417,7 @@
       <button class="window-close-btn" type="button" data-win="gilHour" title="Close">✕</button>
     </div>
     <div class="panel">
-      <p class="recipe-meta" style="margin-top:0;">Say how many you want to make (or gather and sell raw) — if it's craftable, the slave pulls the real recipe and works out exactly how much of each material you need. Sale price stays current from the Light data center. Your gather time is the one thing nobody but you knows, so it's optional here — fill it in whenever you actually find out, and gil/hour appears once you do.</p>
+      <p class="recipe-meta" style="margin-top:0;">Say how many you want to make (or gather and sell raw) — if it's craftable, the slave pulls the real recipe and follows the whole chain down to raw materials (if what you need is itself crafted from something else, that gets expanded too, all the way to what you'd actually gather). Sale price stays current from the Light data center. Your gather time is the one thing nobody but you knows, so it's optional here — fill it in whenever you actually find out, and gil/hour appears once you do.</p>
       <div class="row">
         <div class="field" style="flex:1;">
           <label for="gilItemInput">Item you sell (name or wiki URL)</label>
@@ -4975,6 +4975,82 @@ function renderCactpotSolver(){
 // knows, so it's optional — fill it in whenever you find out, and gil/hour
 // appears once it's set; until then this still answers "how much material
 // do I need," which doesn't require knowing the time at all. ---
+// Fully expands a recipe's ingredients recursively down to raw materials —
+// unlike resolveIngredients() (used by Craft Cost/Shopping List/Profit Calc,
+// which only looks one craft-level deep, just enough to compare "buy it vs
+// craft it yourself"), this keeps recursing through every crafted
+// sub-ingredient until it hits something with no recipe of its own — a real
+// gathered/vendor/desynth/drop item. Amounts are stored per-craft (never
+// pre-multiplied), so editing the target quantity later never needs a
+// re-fetch. `cache` is shared across one whole call so a material referenced
+// from multiple branches (Wind Crystal shows up constantly) is only ever
+// fetched once.
+const GIL_MATERIAL_MAX_DEPTH = 6;
+async function resolveFullMaterialTree(ingredients, depth, cache, logFn){
+  return Promise.all(ingredients.map(async ing => {
+    // Cache the in-flight PROMISE synchronously (not the resolved value) —
+    // several branches often want the same material id at once (crystals
+    // especially), and since this assignment happens before any `await`
+    // yields control, concurrent callers see it's already claimed and await
+    // the one shared request instead of each firing off their own redundant
+    // fetch for the same item.
+    if (!cache[ing.id]){
+      logFn('  resolving material ' + ing.id + ' (depth ' + depth + ')...');
+      cache[ing.id] = fetchJson('https://garlandtools.org/db/doc/item/en/3/' + ing.id + '.json', logFn);
+    }
+    let data;
+    try{
+      data = await cache[ing.id];
+    }catch(e){
+      return { id: ing.id, name: 'Item ' + ing.id, amountPerCraft: ing.amount, isCraftable: false, children: null, resolveFailed: true };
+    }
+    const item = data.item;
+    const crafts = item.craft || [];
+    let children = null;
+    if (crafts.length && depth < GIL_MATERIAL_MAX_DEPTH){
+      children = await resolveFullMaterialTree(crafts[0].ingredients, depth + 1, cache, logFn);
+    }
+    return { id: ing.id, name: item.name, amountPerCraft: ing.amount, isCraftable: crafts.length > 0, children };
+  }));
+}
+// Walks a stored material tree, multiplying each node's per-craft amount by
+// however many of its PARENT are actually needed (starting from
+// unitsNeeded = the current target quantity at the root) — computed live
+// every render so editing the quantity never goes stale. Returns both the
+// tree annotated with `.totalNeeded`, and a flattened, summed map of every
+// true leaf (raw/non-craftable) material — the direct answer to "how much
+// of the actual gatherable stuff do I need in total."
+function computeGilMaterialTotals(nodes, unitsNeeded, leafTotals){
+  leafTotals = leafTotals || {};
+  const withTotals = nodes.map(node => {
+    const totalNeeded = node.amountPerCraft * unitsNeeded;
+    let children = null;
+    if (node.children && node.children.length){
+      children = computeGilMaterialTotals(node.children, totalNeeded, leafTotals).tree;
+    } else {
+      leafTotals[node.name] = (leafTotals[node.name] || 0) + totalNeeded;
+    }
+    return Object.assign({}, node, { totalNeeded, children });
+  });
+  return { tree: withTotals, leafTotals };
+}
+// Every material name links straight to its wiki page (same convenience
+// link Craft Cost's own ingredient rows use) so you can jump to "how do I
+// actually get this" without leaving the card.
+function gilMaterialWikiLink(name){
+  const safe = String(name).replace(/</g, '&lt;');
+  return '<a href="' + wikiUrlForName(name) + '" target="_blank" rel="noopener">' + safe + '</a>';
+}
+function renderGilMaterialTreeHtml(nodes){
+  return '<ul style="margin:0 0 4px; padding-left:20px;">' + nodes.map(node => {
+    const amountStr = fmt(Math.ceil(node.totalNeeded)) + '× ' + gilMaterialWikiLink(node.name);
+    if (node.children && node.children.length){
+      return '<li>' + amountStr + ' <span class="recipe-meta" style="font-weight:400;">(crafted)</span>' + renderGilMaterialTreeHtml(node.children) + '</li>';
+    }
+    return '<li>' + amountStr + '</li>';
+  }).join('') + '</ul>';
+}
+
 function loadGilMethods(){
   try{ const l = JSON.parse(localStorage.getItem('lycaas_gil_methods') || '[]'); return Array.isArray(l) ? l : []; }
   catch(e){ return []; }
@@ -5098,20 +5174,19 @@ async function addOrUpdateGilMethod(){
     // recipe, not guessed. Not craftable just means "gather and sell this
     // exact item" — nothing to resolve, the item IS the material.
     const crafts = item.craft || [];
-    let isCraftable = false, recipeJob = null, recipeLvl = null, ingredients = null;
+    let isCraftable = false, recipeJob = null, recipeLvl = null, materialTree = null;
     if (crafts.length){
       isCraftable = true;
       const recipe = crafts[0];
       recipeJob = recipe.job; recipeLvl = recipe.lvl;
-      gilUI.log((crafts.length > 1 ? ('Craftable ' + crafts.length + ' ways — using the first — ') : 'Craftable — ') + 'resolving its ' + recipe.ingredients.length + ' ingredient(s)...');
-      const resolved = await resolveIngredients(recipe, gilUI.log);
-      ingredients = resolved.map(r => ({ name: r.name, amountPerCraft: r.amount }));
+      gilUI.log((crafts.length > 1 ? ('Craftable ' + crafts.length + ' ways — using the first — ') : 'Craftable — ') + 'resolving the full material chain...');
+      materialTree = await resolveFullMaterialTree(recipe.ingredients, 1, {}, gilUI.log);
     }
 
     list.push({
       id: makeId(), itemId: gtId, itemName: item.name,
       targetQty: qtyVal, minutesPerRound: minutesVal, notes,
-      isCraftable, recipeJob, recipeLvl, ingredients,
+      isCraftable, recipeJob, recipeLvl, materialTree,
       manualPrice, unit: null, typicalPrice: null, outlier: false, checkedAt: null,
       createdAt: new Date().toISOString(),
     });
@@ -5215,13 +5290,22 @@ function renderGilMethods(){
     const safeName = String(m.itemName).replace(/</g, '&lt;');
     const safeNotes = m.notes ? String(m.notes).replace(/</g, '&lt;') : '';
     let materialsHtml = '';
-    if (m.isCraftable && m.ingredients && m.ingredients.length){
+    if (m.isCraftable && m.materialTree && m.materialTree.length){
       const jobName = JOB_NAMES[m.recipeJob] || ('Job ' + m.recipeJob);
-      const rows = m.ingredients.map(ing =>
-        '<li>' + fmt(Math.ceil(ing.amountPerCraft * m.targetQty)) + '× ' + String(ing.name).replace(/</g, '&lt;') + '</li>'
-      ).join('');
-      materialsHtml = '<p class="recipe-meta" style="margin:6px 0 2px;">To make ' + m.targetQty + ', gather (recipe: ' + jobName + ' Lv.' + m.recipeLvl + '):</p>'
-        + '<ul style="margin:0 0 4px; padding-left:20px;">' + rows + '</ul>';
+      const { tree, leafTotals } = computeGilMaterialTotals(m.materialTree, m.targetQty);
+      const hasIntermediateCrafts = tree.some(n => n.children && n.children.length);
+      materialsHtml = '<p class="recipe-meta" style="margin:6px 0 2px;">To make ' + m.targetQty + ' (recipe: ' + jobName + ' Lv.' + m.recipeLvl + '):</p>'
+        + renderGilMaterialTreeHtml(tree);
+      if (hasIntermediateCrafts){
+        // Only worth a separate "grand total" section when something in the
+        // chain is itself crafted — otherwise this would just repeat the
+        // exact same list shown right above it.
+        const leafRows = Object.keys(leafTotals).sort().map(name =>
+          '<li>' + fmt(Math.ceil(leafTotals[name])) + '× ' + gilMaterialWikiLink(name) + '</li>'
+        ).join('');
+        materialsHtml += '<p class="recipe-meta" style="margin:6px 0 2px; font-weight:700;">Total raw materials needed:</p>'
+          + '<ul style="margin:0 0 4px; padding-left:20px;">' + leafRows + '</ul>';
+      }
     } else if (!m.isCraftable){
       materialsHtml = '<p class="recipe-meta" style="margin:6px 0 2px;">Not craftable — gather and sell ' + m.targetQty + ' of these directly.</p>';
     }
@@ -5282,7 +5366,12 @@ function importGilMethodsFile(file){
           isCraftable: !!m.isCraftable,
           recipeJob: (m.recipeJob != null) ? m.recipeJob : null,
           recipeLvl: (m.recipeLvl != null) ? m.recipeLvl : null,
-          ingredients: Array.isArray(m.ingredients) ? m.ingredients : null,
+          // materialTree is the current (recursive) shape; a file exported
+          // before the full-chain rework only has the old flat `ingredients`
+          // list — wrap each as a leafless node so it still renders fine,
+          // just without the deeper breakdown until re-added.
+          materialTree: Array.isArray(m.materialTree) ? m.materialTree
+            : (Array.isArray(m.ingredients) ? m.ingredients.map(i => ({ id: null, name: i.name, amountPerCraft: i.amountPerCraft, isCraftable: false, children: null })) : null),
           manualPrice: (m.manualPrice != null) ? m.manualPrice : null,
           unit: null, typicalPrice: null, outlier: false, checkedAt: null,
           createdAt: m.createdAt || new Date().toISOString(),
