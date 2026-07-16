@@ -12,7 +12,7 @@
     --border:#cdbb92; --accent:#8c3a2b; --accent-dim:#6b2c20;
     --noise-light:.25; --noise-line1:.035; --noise-line2:.02;
   }
-  /* Dark "paper" — same aged-ledger feel, just lit by lamplight instead oof
+  /* Dark "paper" — same aged-ledger feel, just lit by lamplight instead of
      daylight: dark leather/walnut tones instead of a flat modern dark mode. */
   html[data-theme="dark"]{
     --bg:#1c1712; --paper:#2a231b; --panel:#31281f; --panel2:#281f17;
@@ -154,7 +154,6 @@
   }
   .launcher-btn:hover{border-color:var(--border); background:var(--panel2);}
   .launcher-btn.open{color:var(--accent); font-weight:700; background:var(--panel2); border-color:var(--border);}
-  .launcher-reset-btn{border-top:1px dashed var(--border); margin-top:4px; padding-top:10px; color:var(--dim); font-size:.85rem;}
 
   /* Row wrapper for a launcher entry that also has a close-from-sidebar button
      (only the per-window toggle buttons get one — presets/reset don't). The
@@ -174,10 +173,32 @@
     width:26px; padding:8px 6px; opacity:1; pointer-events:auto;
   }
   .launcher-close-x:hover{color:var(--bad); background:var(--panel2); border-color:var(--border);}
-  .launcher-divider{
-    border-top:1px dashed var(--border); margin-top:8px; padding:8px 0 2px;
-    font-size:.7rem; text-transform:uppercase; letter-spacing:.5px; color:var(--dim); font-style:italic;
+
+  /* --- Presets dropdown: sits directly above the launcher sidebar (same
+     left edge, higher up) instead of cluttering that list with a growing
+     pile of layout buttons. --- */
+  .presets-dropdown{position:fixed; top:16px; left:16px; z-index:9100;}
+  .presets-dropdown-btn{
+    display:flex; align-items:center; gap:6px; background:var(--panel); border:1px solid var(--border);
+    color:var(--ink); font-size:.85rem; padding:8px 12px; border-radius:8px; white-space:nowrap;
+    box-shadow:0 4px 12px rgba(0,0,0,.18);
   }
+  .presets-dropdown-btn:hover{border-color:var(--accent-dim); color:var(--accent);}
+  .presets-caret{font-size:.7rem; opacity:.7;}
+  .presets-menu{
+    position:absolute; top:calc(100% + 6px); left:0; min-width:230px;
+    background:var(--paper); border:1px solid var(--border); border-radius:8px;
+    box-shadow:0 10px 26px rgba(0,0,0,.28); padding:6px; z-index:9100;
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .presets-menu.hidden{display:none;}
+  .presets-menu-item{
+    display:flex; align-items:center; gap:8px; background:transparent; border:1px solid transparent;
+    color:var(--ink); font-weight:400; padding:8px 10px; border-radius:4px; text-align:left; white-space:nowrap; width:100%;
+  }
+  .presets-menu-item:hover{border-color:var(--border); background:var(--panel2); color:var(--accent);}
+  .presets-menu-divider{border-top:1px dashed var(--border); margin:4px 2px;}
+  .presets-reset-item{color:var(--dim); font-size:.9rem;}
 
   .tab-panel{
     position:fixed; top:100px; left:220px; width:560px;
@@ -205,6 +226,7 @@
       position:static; flex-direction:row; flex-wrap:wrap; width:auto;
       margin-bottom:16px; max-height:none; transform:none;
     }
+    .presets-dropdown{position:static; margin-bottom:12px; display:inline-block;}
     .tab-panel{
       position:static !important; width:100% !important; max-width:100% !important;
       max-height:none !important; margin-bottom:16px; box-shadow:none; resize:none;
@@ -487,6 +509,10 @@
   .char-result-card:hover{border-color:var(--accent-dim); color:var(--accent);}
   .char-result-card img{width:32px; height:32px; border-radius:3px; object-fit:cover; flex-shrink:0; background:var(--panel2);}
   .char-portrait{width:100%; max-width:280px; border:1px solid var(--border); border-radius:6px; display:block; background:var(--panel2);}
+
+  .gil-method-card{margin-bottom:10px;}
+  .gil-rate{font-weight:700; font-size:1.15rem; color:var(--good); white-space:nowrap; flex-shrink:0;}
+  .gil-rate-unknown{color:var(--dim); font-weight:400; font-size:1rem;}
   .palette-backdrop{
     position:fixed; inset:0; background:rgba(20,15,8,.5); z-index:9800;
     display:flex; align-items:flex-start; justify-content:center; padding:10vh 20px;
@@ -619,13 +645,23 @@
     <div class="launcher-row"><button class="launcher-btn" type="button" data-win="dailyTasks">✅ <span>Daily Tasks</span></button><button class="launcher-close-x" type="button" data-win="dailyTasks" title="Close">✕</button></div>
     <div class="launcher-row"><button class="launcher-btn" type="button" data-win="todo">📝 <span>To-Do</span></button><button class="launcher-close-x" type="button" data-win="todo" title="Close">✕</button></div>
     <div class="launcher-row"><button class="launcher-btn" type="button" data-win="goldSaucer">🎰 <span>Gold Saucer</span></button><button class="launcher-close-x" type="button" data-win="goldSaucer" title="Close">✕</button></div>
-    <div class="launcher-divider">Presets</div>
-    <button class="launcher-btn" type="button" data-preset="glamourFitting" title="Glamour + Craft Cost + Shopping List, arranged side by side">👗 <span>Glamour Fitting</span></button>
-    <button class="launcher-btn" type="button" data-preset="craftingDesk" title="Craft Cost + Profit Calc + Shopping List, arranged side by side">📦 <span>Crafting Desk</span></button>
-    <button class="launcher-btn" type="button" data-preset="marketWatch" title="Watchlist + Item Lookup, side by side">📊 <span>Market Watch</span></button>
-    <button class="launcher-btn" type="button" data-preset="collectorsCorner" title="Unlockables + Personal Stats, side by side">🐴 <span>Collector's Corner</span></button>
-    <button class="launcher-btn launcher-reset-btn" type="button" id="windowResetBtn" title="Close everything and reset window positions">⊞ <span>Reset layout</span></button>
+    <div class="launcher-row"><button class="launcher-btn" type="button" data-win="gilHour">⏱️ <span>Gil/Hour</span></button><button class="launcher-close-x" type="button" data-win="gilHour" title="Close">✕</button></div>
     <p class="footer-note" id="footerNote">the slave fetches; the slave does not explain itself.</p>
+  </div>
+
+  <div class="presets-dropdown" id="presetsDropdown">
+    <button type="button" id="presetsDropdownBtn" class="presets-dropdown-btn">🧩 <span>Presets</span> <span class="presets-caret">▾</span></button>
+    <div class="presets-menu hidden" id="presetsMenu">
+      <button class="presets-menu-item" type="button" data-preset="glamourFitting" title="Glamour + Craft Cost + Shopping List, arranged side by side">👗 Glamour Fitting</button>
+      <button class="presets-menu-item" type="button" data-preset="craftingDesk" title="Craft Cost + Profit Calc + Shopping List, arranged side by side">📦 Crafting Desk</button>
+      <button class="presets-menu-item" type="button" data-preset="marketWatch" title="Watchlist + Item Lookup, side by side">📊 Market Watch</button>
+      <button class="presets-menu-item" type="button" data-preset="collectorsCorner" title="Unlockables + Personal Stats, side by side">🐴 Collector's Corner</button>
+      <button class="presets-menu-item" type="button" data-preset="dailyGrind" title="Daily Tasks + To-Do, side by side">✅ Daily Grind</button>
+      <button class="presets-menu-item" type="button" data-preset="gilFarmer" title="Gil/Hour + Watchlist, side by side">⏱️ Gil Farmer</button>
+      <button class="presets-menu-item" type="button" data-preset="socialButterfly" title="Character Look + Glamour, side by side">🧑‍🎤 Social Butterfly</button>
+      <div class="presets-menu-divider"></div>
+      <button class="presets-menu-item presets-reset-item" type="button" id="windowResetBtn" title="Close everything and reset window positions">⊞ Reset layout</button>
+    </div>
   </div>
 
   <div class="claimed-badge" id="claimedBadge"></div>
@@ -698,8 +734,13 @@
         <p style="margin:0 0 8px;">Mini Cactpot solver — enter what you've scratched off and it works out the expected MGP for every line (row, column, diagonal), plus which cell to reveal next for the best odds.</p>
         <button class="secondary info-open-btn" data-open-win="goldSaucer">Open →</button>
       </div>
+      <div class="panel info-feature-card">
+        <h3 style="margin:0 0 4px;">⏱️ Gil/Hour</h3>
+        <p style="margin:0 0 8px;">Say how many you want to make or gather — for craftable items the slave pulls the real recipe and works out exactly how much material you need. Sale price stays current from the Light data center; add your gather time whenever you know it to see gil/hour.</p>
+        <button class="secondary info-open-btn" data-open-win="gilHour">Open →</button>
+      </div>
 
-      <p class="recipe-meta" style="margin-bottom:0;">Also worth knowing: the 🌍 button next to this one sets your home world, the basket floats in the top-right corner, and there's a dark mode toggle right here too — all three stay out of the way of your windows. Press <b>Ctrl+K</b> (<b>⌘K</b> on Mac) anywhere to pull up a quick search that jumps straight to a window, a saved character, a favorite, or a to-do item. And Personal Stats has a "Backup Everything" button that exports (or restores) every bit of data this tool remembers, in one file.</p>
+      <p class="recipe-meta" style="margin-bottom:0;">Also worth knowing: the 🧩 Presets button above the window list (top-left) holds ready-made window layouts plus "Reset layout." The 🌍 button next to this one sets your home world, and there's a dark mode toggle right here too. Claim a character in Character Look and their avatar shows up top-right. The basket only appears bottom-right once it actually has something in it. Press <b>Ctrl+K</b> (<b>⌘K</b> on Mac) anywhere to pull up a quick search that jumps straight to a window, a layout, a saved character, a favorite, or a to-do item. And Personal Stats has a "Backup Everything" button that exports (or restores) every bit of data this tool remembers, in one file.</p>
     </div>
   </div>
 
@@ -1370,6 +1411,82 @@
   </div>
   </div>
 
+  <div id="tabGilHour" class="tab-panel hidden">
+    <div class="window-titlebar" data-win="gilHour">
+      <span class="window-title">⏱️ Gil/Hour</span>
+      <button class="window-close-btn" type="button" data-win="gilHour" title="Close">✕</button>
+    </div>
+    <div class="panel">
+      <p class="recipe-meta" style="margin-top:0;">Say how many you want to make (or gather and sell raw) — if it's craftable, the slave pulls the real recipe and works out exactly how much of each material you need. Sale price stays current from the Light data center. Your gather time is the one thing nobody but you knows, so it's optional here — fill it in whenever you actually find out, and gil/hour appears once you do.</p>
+      <div class="row">
+        <div class="field" style="flex:1;">
+          <label for="gilItemInput">Item you sell (name or wiki URL)</label>
+          <input type="text" id="gilItemInput" placeholder="Wood Slat Partition">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" style="max-width:170px;">
+          <label for="gilQtyInput">How many do you want?</label>
+          <input type="number" id="gilQtyInput" min="1" value="1">
+        </div>
+        <div class="field" style="max-width:190px;">
+          <label for="gilMinutesInput">Minutes to gather it all (optional)</label>
+          <input type="number" id="gilMinutesInput" min="1" placeholder="fill in later">
+        </div>
+        <div class="field" style="max-width:190px;">
+          <label for="gilManualPriceInput">Manual price override</label>
+          <input type="number" id="gilManualPriceInput" min="0" placeholder="blank = auto-price">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:1;">
+          <label for="gilNotesInput">Notes (optional — node, job/level, whatever's worth remembering)</label>
+          <input type="text" id="gilNotesInput" placeholder="e.g. BTN Lv 80 nodes near Slitherbough">
+        </div>
+      </div>
+      <div class="row">
+        <button id="gilAddBtn">Add method</button>
+        <button id="gilCancelEditBtn" class="secondary hidden">Cancel edit</button>
+        <button id="gilRefreshBtn" class="secondary">Refresh all prices</button>
+      </div>
+      <div id="gilSuggestions" class="recent-strip hidden"></div>
+    </div>
+
+    <div id="gilFriendlyStatus" class="friendly-status hidden">
+      <span class="spinner-emoji">⏱️</span>
+      <span id="gilFriendlyText">Thinking...</span>
+    </div>
+
+    <div id="gilErrorCard" class="panel error-card hidden">
+      <p class="funny-line" id="gilErrorFunny"></p>
+      <div class="row">
+        <button id="gilCopyErrorBtn" class="secondary">Copy error for Lycaa</button>
+        <span id="gilCopyConfirm" class="copy-confirm hidden">Copied. Go forth.</span>
+      </div>
+      <details>
+        <summary style="cursor:pointer; color:var(--dim); font-style:italic; font-size:.8rem;">Technical details</summary>
+        <pre id="gilErrorTech" style="white-space:pre-wrap; font-size:.78rem; color:var(--dim); margin-top:8px;"></pre>
+      </details>
+    </div>
+
+    <details id="gilLogDetails" class="tech-log-details">
+      <summary>Technical log (for the curious, or for Lycaa)</summary>
+      <pre id="gilLog"></pre>
+    </details>
+
+    <div class="panel">
+      <div class="row">
+        <button id="gilExportBtn" class="secondary">Export methods</button>
+        <button id="gilImportBtn" class="secondary">Import methods</button>
+        <input type="file" id="gilImportFile" accept="application/json,.json" class="hidden">
+        <span id="gilImportConfirm" class="copy-confirm hidden">Imported.</span>
+      </div>
+      <p class="recipe-meta" style="margin:8px 0 0;">Sorted best gil/hour first. Sale prices are the current cheapest Light DC listing — a snapshot, not a promise. Only lives in this browser, so export a backup now and then.</p>
+    </div>
+
+    <div id="gilResults"></div>
+  </div>
+
   <div id="personalStatsPage" class="tab-panel hidden">
     <div class="window-titlebar" data-win="personalStats">
       <span class="window-title">📜 The Slave's Personal Stats</span>
@@ -1554,7 +1671,7 @@ document.getElementById('themeToggleBtn').addEventListener('click', ()=>{
 // open at once; the left-side launcher sidebar opens/focuses them, and each
 // window's own titlebar drags it around or closes it. On narrow screens
 // (<900px) windows fall back to plain stacked full-width panels instead. ---
-const WINDOW_IDS = ['craft', 'lookup', 'shopping', 'profit', 'watch', 'glamour', 'unlockables', 'personalStats', 'characterLook', 'dailyTasks', 'todo', 'goldSaucer'];
+const WINDOW_IDS = ['craft', 'lookup', 'shopping', 'profit', 'watch', 'glamour', 'unlockables', 'personalStats', 'characterLook', 'dailyTasks', 'todo', 'goldSaucer', 'gilHour'];
 function windowElId(id){
   return id === 'personalStats' ? 'personalStatsPage' : ('tab' + id.charAt(0).toUpperCase() + id.slice(1));
 }
@@ -1687,6 +1804,24 @@ const WINDOW_PRESETS = {
       { id: 'unlockables',   xFrac: 0,    yFrac: 0, wFrac: 0.48, hFrac: 1 },
       { id: 'personalStats', xFrac: 0.50, yFrac: 0, wFrac: 0.48, hFrac: 1 },
     ]
+  },
+  dailyGrind: {
+    windows: [
+      { id: 'dailyTasks', xFrac: 0,    yFrac: 0, wFrac: 0.48, hFrac: 1 },
+      { id: 'todo',       xFrac: 0.50, yFrac: 0, wFrac: 0.48, hFrac: 1 },
+    ]
+  },
+  gilFarmer: {
+    windows: [
+      { id: 'gilHour', xFrac: 0,    yFrac: 0, wFrac: 0.48, hFrac: 1 },
+      { id: 'watch',   xFrac: 0.50, yFrac: 0, wFrac: 0.48, hFrac: 1 },
+    ]
+  },
+  socialButterfly: {
+    windows: [
+      { id: 'characterLook', xFrac: 0,    yFrac: 0, wFrac: 0.48, hFrac: 1 },
+      { id: 'glamour',       xFrac: 0.50, yFrac: 0, wFrac: 0.48, hFrac: 1 },
+    ]
   }
 };
 function applyPreset(name){
@@ -1791,10 +1926,25 @@ document.querySelectorAll('.launcher-close-x[data-win]').forEach(btn=>{
   // just hidden via CSS in that case), so closeWindow() is called defensively.
   btn.addEventListener('click', ()=>closeWindow(btn.dataset.win));
 });
-document.querySelectorAll('.launcher-btn[data-preset]').forEach(btn=>{
-  btn.addEventListener('click', ()=>applyPreset(btn.dataset.preset));
+document.querySelectorAll('.presets-menu-item[data-preset]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    applyPreset(btn.dataset.preset);
+    document.getElementById('presetsMenu').classList.add('hidden');
+  });
 });
-document.getElementById('windowResetBtn').addEventListener('click', resetWindowLayout);
+document.getElementById('windowResetBtn').addEventListener('click', ()=>{
+  resetWindowLayout();
+  document.getElementById('presetsMenu').classList.add('hidden');
+});
+document.getElementById('presetsDropdownBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  document.getElementById('presetsMenu').classList.toggle('hidden');
+});
+document.addEventListener('click', (e)=>{
+  const menu = document.getElementById('presetsMenu');
+  if (!menu || menu.classList.contains('hidden')) return;
+  if (!e.target.closest('.presets-dropdown')) menu.classList.add('hidden');
+});
 document.addEventListener('click', (e)=>{
   const closeBtn = e.target.closest('.window-close-btn');
   if (closeBtn && closeBtn.dataset.win) closeWindow(closeBtn.dataset.win);
@@ -2029,6 +2179,11 @@ const charLookUI = createUI({
   errorCard:'charLookErrorCard', errorFunny:'charLookErrorFunny', errorTech:'charLookErrorTech', logDetails:'charLookLogDetails',
   copyErrorBtn:'charLookCopyErrorBtn', copyConfirm:'charLookCopyConfirm'
 });
+const gilUI = createUI({
+  log:'gilLog', friendlyStatus:'gilFriendlyStatus', friendlyText:'gilFriendlyText',
+  errorCard:'gilErrorCard', errorFunny:'gilErrorFunny', errorTech:'gilErrorTech', logDetails:'gilLogDetails',
+  copyErrorBtn:'gilCopyErrorBtn', copyConfirm:'gilCopyConfirm'
+});
 // Clear a tab's error card the instant its input changes — a stale error card
 // sitting there while you type a totally different item looks like a bug.
 document.getElementById('wikiUrl').addEventListener('input', ()=>{ craftUI.hideError(); clearSuggestions('craftSuggestions'); });
@@ -2041,6 +2196,7 @@ UNLOCK_SUBTAB_IDS.forEach(t => {
 });
 document.getElementById('charLookNameInput').addEventListener('input', ()=>charLookUI.hideError());
 document.getElementById('charLookWorldInput').addEventListener('input', ()=>charLookUI.hideError());
+document.getElementById('gilItemInput').addEventListener('input', ()=>{ gilUI.hideError(); clearSuggestions('gilSuggestions'); });
 
 async function fetchViaProxies(url, proxies, logFn, timeoutMs){
   // Race every route in parallel instead of one-at-a-time — a sequential chain of
@@ -4808,6 +4964,345 @@ function renderCactpotSolver(){
   if (cancelBtn) cancelBtn.addEventListener('click', cancelCactpotPick);
 }
 
+// --- Gil/Hour Methods: a saved library of your own gather-then-sell (or
+// gather-craft-sell) loops. You only ever type how many you want — for
+// anything craftable, the recipe (ingredients + amounts) is fetched for real
+// from the same Garland Tools data Craft Cost already uses, and materials
+// needed are computed live from that (amount-per-craft × how many you want),
+// never typed in by hand. Sale price is likewise auto-fetched (same
+// "cheapest current Light DC listing" convention used everywhere else in
+// this tool). Your actual gather time is the one thing nobody but you
+// knows, so it's optional — fill it in whenever you find out, and gil/hour
+// appears once it's set; until then this still answers "how much material
+// do I need," which doesn't require knowing the time at all. ---
+function loadGilMethods(){
+  try{ const l = JSON.parse(localStorage.getItem('lycaas_gil_methods') || '[]'); return Array.isArray(l) ? l : []; }
+  catch(e){ return []; }
+}
+function saveGilMethods(list){ localStorage.setItem('lycaas_gil_methods', JSON.stringify(list)); }
+function computeGilBatchValue(m){
+  const price = (m.manualPrice != null) ? m.manualPrice : m.unit;
+  if (price == null) return null;
+  return price * m.targetQty;
+}
+function computeGilPerHour(m){
+  const value = computeGilBatchValue(m);
+  if (value == null || !m.minutesPerRound) return null;
+  return value / (m.minutesPerRound / 60);
+}
+let gilEditingId = null;
+function resetGilForm(){
+  document.getElementById('gilItemInput').value = '';
+  document.getElementById('gilQtyInput').value = 1;
+  document.getElementById('gilMinutesInput').value = '';
+  document.getElementById('gilManualPriceInput').value = '';
+  document.getElementById('gilNotesInput').value = '';
+}
+function startEditGilMethod(id){
+  const m = loadGilMethods().find(x => String(x.id) === String(id));
+  if (!m) return;
+  gilEditingId = id;
+  document.getElementById('gilItemInput').value = m.itemName;
+  document.getElementById('gilItemInput').disabled = true;
+  document.getElementById('gilQtyInput').value = m.targetQty;
+  document.getElementById('gilMinutesInput').value = (m.minutesPerRound != null) ? m.minutesPerRound : '';
+  document.getElementById('gilManualPriceInput').value = (m.manualPrice != null) ? m.manualPrice : '';
+  document.getElementById('gilNotesInput').value = m.notes || '';
+  document.getElementById('gilAddBtn').textContent = 'Save changes';
+  document.getElementById('gilCancelEditBtn').classList.remove('hidden');
+}
+function cancelEditGilMethod(){
+  gilEditingId = null;
+  document.getElementById('gilItemInput').disabled = false;
+  resetGilForm();
+  document.getElementById('gilAddBtn').textContent = 'Add method';
+  document.getElementById('gilCancelEditBtn').classList.add('hidden');
+}
+function removeGilMethod(id){
+  saveGilMethods(loadGilMethods().filter(m => String(m.id) !== String(id)));
+  renderGilMethods();
+}
+async function addOrUpdateGilMethod(){
+  bumpMood();
+  gilUI.hideError();
+  gilUI.clearLog();
+  clearSuggestions('gilSuggestions');
+  const qtyVal = Math.max(1, parseInt(document.getElementById('gilQtyInput').value, 10) || 1);
+  const minutesRaw = document.getElementById('gilMinutesInput').value;
+  const minutesVal = minutesRaw.trim() === '' ? null : Math.max(1, parseFloat(minutesRaw) || 1);
+  const notes = document.getElementById('gilNotesInput').value.trim();
+  const manualRaw = document.getElementById('gilManualPriceInput').value;
+  const manualPrice = manualRaw.trim() === '' ? null : Math.max(0, parseFloat(manualRaw) || 0);
+
+  // Editing an existing entry only ever touches the numbers/notes you typed —
+  // the item and its recipe are locked (remove and re-add to change the
+  // item), so there's no wiki/recipe lookup to redo here. Quantity IS safe to
+  // edit without a re-fetch, since materials are computed live from the
+  // recipe's per-craft amounts × quantity, not stored pre-multiplied.
+  if (gilEditingId){
+    const list = loadGilMethods();
+    const m = list.find(x => String(x.id) === String(gilEditingId));
+    if (m){
+      m.targetQty = qtyVal; m.minutesPerRound = minutesVal; m.notes = notes; m.manualPrice = manualPrice;
+      saveGilMethods(list);
+      renderGilMethods();
+    }
+    cancelEditGilMethod();
+    return;
+  }
+
+  const raw = document.getElementById('gilItemInput').value.trim();
+  if (!raw){ alert('Type the item you sell (name or wiki URL) first.'); return; }
+  const btn = document.getElementById('gilAddBtn');
+  btn.disabled = true;
+  try{
+    const isUrlInput = /^https?:\/\//i.test(raw);
+    let pageUrl;
+    if (isUrlInput){
+      try{ pageUrl = new URL(raw).toString(); }
+      catch(e){ throw friendlyError('That doesn\'t look like a valid URL.'); }
+    } else {
+      pageUrl = wikiUrlForName(raw);
+    }
+    gilUI.setStage('wiki');
+    gilUI.log('Fetching wiki page...');
+    const html = await fetchHtml(pageUrl, gilUI.log);
+    const gtId = extractGarlandId(html);
+    if (!gtId){
+      if (!isUrlInput){
+        gilUI.log('No direct match — checking the wiki\'s own search suggestions...');
+        const suggestions = await fetchWikiSuggestions(raw, gilUI.log);
+        if (suggestions.length){
+          renderSuggestions('gilSuggestions', suggestions, (s)=>{
+            document.getElementById('gilItemInput').value = s.name;
+            addOrUpdateGilMethod();
+          });
+          throw friendlyError('Couldn\'t find an exact match for "' + raw + '". Try one of the suggestions above, or check the spelling.');
+        }
+      }
+      throw friendlyError('Could not find a market/item link on that page. Try the exact wiki spelling, or paste the full wiki URL instead.');
+    }
+    gilUI.setStage('recipe');
+    gilUI.log('Found item ID ' + gtId + '. Fetching item data...');
+    const itemData = await fetchJson('https://garlandtools.org/db/doc/item/en/3/' + gtId + '.json', gilUI.log);
+    const item = itemData.item;
+    if (!item.tradeable) throw friendlyError('"' + item.name + '" can\'t be sold on the market board — there\'s no sale price to track.');
+
+    const list = loadGilMethods();
+    if (list.find(x => String(x.itemId) === String(gtId))){
+      throw friendlyError('You already have a method for "' + item.name + '" — edit or remove the existing one instead of adding a duplicate.');
+    }
+
+    // Craftable? Pull the real recipe (same Garland Tools data + resolver
+    // Craft Cost uses) so materials-needed is computed from the actual game
+    // recipe, not guessed. Not craftable just means "gather and sell this
+    // exact item" — nothing to resolve, the item IS the material.
+    const crafts = item.craft || [];
+    let isCraftable = false, recipeJob = null, recipeLvl = null, ingredients = null;
+    if (crafts.length){
+      isCraftable = true;
+      const recipe = crafts[0];
+      recipeJob = recipe.job; recipeLvl = recipe.lvl;
+      gilUI.log((crafts.length > 1 ? ('Craftable ' + crafts.length + ' ways — using the first — ') : 'Craftable — ') + 'resolving its ' + recipe.ingredients.length + ' ingredient(s)...');
+      const resolved = await resolveIngredients(recipe, gilUI.log);
+      ingredients = resolved.map(r => ({ name: r.name, amountPerCraft: r.amount }));
+    }
+
+    list.push({
+      id: makeId(), itemId: gtId, itemName: item.name,
+      targetQty: qtyVal, minutesPerRound: minutesVal, notes,
+      isCraftable, recipeJob, recipeLvl, ingredients,
+      manualPrice, unit: null, typicalPrice: null, outlier: false, checkedAt: null,
+      createdAt: new Date().toISOString(),
+    });
+    saveGilMethods(list);
+    resetGilForm();
+    renderGilMethods();
+    bumpStat('searches', 1);
+    gilUI.log('Added — fetching its price now...');
+    await recheckGilMethods(true);
+    gilUI.log('Done.');
+  }catch(e){
+    gilUI.log('Error: ' + e.message, true);
+    gilUI.showError(e);
+  }finally{
+    gilUI.stopStatus();
+    btn.disabled = false;
+  }
+}
+async function recheckGilMethods(isAuto){
+  const list = loadGilMethods();
+  if (!list.length){
+    if (!isAuto) alert('No gil/hour methods saved yet — add one first.');
+    return;
+  }
+  gilUI.hideError();
+  if (!isAuto) gilUI.clearLog();
+  const btn = document.getElementById('gilRefreshBtn');
+  if (btn && !isAuto) btn.disabled = true;
+  try{
+    gilUI.setStage('prices');
+    gilUI.log((isAuto ? '[auto] ' : '') + 'Fetching live prices for ' + list.length + ' method(s)...');
+    const ids = list.map(m => m.itemId);
+    let priceResult;
+    try{
+      priceResult = await fetchPrices(FIXED_WORLD, ids, gilUI.log);
+    }catch(e){
+      throw new Error('Universalis lookup failed for the ' + FIXED_WORLD + ' data center. (' + e.message + ')');
+    }
+    const worldFilter = getActiveWorldFilter();
+    const now = Date.now();
+    list.forEach(m => {
+      if (priceResult.unresolved.includes(m.itemId) || priceResult.unresolved.includes(String(m.itemId)) || !priceResult.items[m.itemId]){
+        m.unit = null; m.typicalPrice = null; m.outlier = false; m.checkedAt = now;
+      } else {
+        // simplePerUnit=true: a plain "cheapest listing × yield" figure, not
+        // the lot-buying optimizer — that logic is for buying N units as
+        // cheaply as possible, which isn't the question when you're the one
+        // selling a whole batch.
+        const priced = priceForQuantity(priceResult.items[m.itemId], m.targetQty, worldFilter, true);
+        if (!priced){
+          m.unit = null; m.typicalPrice = null; m.outlier = false; m.checkedAt = now;
+        } else {
+          m.unit = priced.unit; m.typicalPrice = priced.typicalPrice; m.outlier = priced.outlier; m.checkedAt = now;
+        }
+      }
+    });
+    saveGilMethods(list);
+    renderGilMethods();
+    gilUI.log('Done.');
+  }catch(e){
+    gilUI.log('Error: ' + e.message, true);
+    gilUI.showError(e);
+  }finally{
+    gilUI.stopStatus();
+    if (btn && !isAuto) btn.disabled = false;
+  }
+}
+function renderGilMethods(){
+  const el = document.getElementById('gilResults');
+  if (!el) return;
+  const list = loadGilMethods();
+  if (!list.length){
+    el.innerHTML = '<p class="recipe-meta" style="margin:0;">No methods saved yet — add your first gather-and-sell loop above.</p>';
+    return;
+  }
+  const withRate = list.map(m => ({ m, rate: computeGilPerHour(m), value: computeGilBatchValue(m) }));
+  withRate.sort((a, b) => {
+    if (a.rate == null && b.rate == null) return 0;
+    if (a.rate == null) return 1;
+    if (b.rate == null) return -1;
+    return b.rate - a.rate;
+  });
+  el.innerHTML = withRate.map(({m, rate, value}) => {
+    const usingManual = m.manualPrice != null;
+    const price = usingManual ? m.manualPrice : m.unit;
+    let priceLine;
+    if (price == null){
+      priceLine = 'Not priced yet — hit "Refresh all prices."';
+    } else {
+      priceLine = fmt(price) + 'g each × ' + m.targetQty + ' = ' + fmt(value) + 'g'
+        + (usingManual ? ' (manual override)' : (' (auto, Light DC' + (m.outlier ? ', ⚠️ possible outlier' : '') + ')'));
+    }
+    let rateLine;
+    if (rate != null){
+      rateLine = '<span class="gil-rate">' + fmt(Math.round(rate)) + 'g/hr</span>';
+    } else if (value != null){
+      rateLine = '<span class="gil-rate gil-rate-unknown">add time →</span>';
+    } else {
+      rateLine = '<span class="gil-rate gil-rate-unknown">? g/hr</span>';
+    }
+    const safeName = String(m.itemName).replace(/</g, '&lt;');
+    const safeNotes = m.notes ? String(m.notes).replace(/</g, '&lt;') : '';
+    let materialsHtml = '';
+    if (m.isCraftable && m.ingredients && m.ingredients.length){
+      const jobName = JOB_NAMES[m.recipeJob] || ('Job ' + m.recipeJob);
+      const rows = m.ingredients.map(ing =>
+        '<li>' + fmt(Math.ceil(ing.amountPerCraft * m.targetQty)) + '× ' + String(ing.name).replace(/</g, '&lt;') + '</li>'
+      ).join('');
+      materialsHtml = '<p class="recipe-meta" style="margin:6px 0 2px;">To make ' + m.targetQty + ', gather (recipe: ' + jobName + ' Lv.' + m.recipeLvl + '):</p>'
+        + '<ul style="margin:0 0 4px; padding-left:20px;">' + rows + '</ul>';
+    } else if (!m.isCraftable){
+      materialsHtml = '<p class="recipe-meta" style="margin:6px 0 2px;">Not craftable — gather and sell ' + m.targetQty + ' of these directly.</p>';
+    }
+    const timeLine = (m.minutesPerRound != null) ? (m.minutesPerRound + ' min') : 'time not set yet';
+    return `
+      <div class="panel gil-method-card">
+        <div class="row" style="justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+          <h3 style="margin:0;">${safeName} <span class="recipe-meta" style="font-weight:400;">×${m.targetQty}</span></h3>
+          ${rateLine}
+        </div>
+        ${materialsHtml}
+        ${safeNotes ? ('<p class="recipe-meta" style="margin:4px 0;">' + safeNotes + '</p>') : ''}
+        <p class="recipe-meta" style="margin:4px 0;">${priceLine} · ${timeLine}</p>
+        <div class="row" style="margin-top:8px;">
+          <button type="button" class="secondary gil-edit-btn" data-id="${m.id}">Edit</button>
+          <button type="button" class="secondary gil-remove-btn" data-id="${m.id}">Remove</button>
+          <a href="https://universalis.app/market/${m.itemId}" target="_blank" rel="noopener" class="acq-link" style="align-self:center;">Check on Universalis →</a>
+        </div>
+      </div>
+    `;
+  }).join('');
+  el.querySelectorAll('.gil-edit-btn').forEach(btn => {
+    btn.addEventListener('click', ()=>startEditGilMethod(btn.dataset.id));
+  });
+  el.querySelectorAll('.gil-remove-btn').forEach(btn => {
+    btn.addEventListener('click', ()=>{
+      if (confirm('Remove this gil/hour method?')) removeGilMethod(btn.dataset.id);
+    });
+  });
+}
+function exportGilMethods(){
+  const list = loadGilMethods();
+  if (!list.length){ alert('No gil/hour methods yet — nothing to export.'); return; }
+  const payload = { exportedFrom: 'Lycaa\'s Slave', exportedAt: new Date().toISOString(), gilMethods: list };
+  downloadTextFile('lycaas-gil-hour-methods.json', JSON.stringify(payload, null, 2), 'application/json');
+}
+function importGilMethodsFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      const incoming = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.gilMethods) ? parsed.gilMethods : null);
+      if (!incoming) throw new Error('not a recognizable gil/hour methods file');
+      const current = loadGilMethods();
+      const currentItemIds = new Set(current.map(m => String(m.itemId)));
+      let added = 0;
+      incoming.forEach(m => {
+        if (!m || m.itemId === undefined || m.itemId === null || !m.itemName) return;
+        if (currentItemIds.has(String(m.itemId))) return;
+        current.push({
+          id: m.id || makeId(), itemId: m.itemId, itemName: m.itemName,
+          // targetQty/notes fall back to the old batchYield/materialsNote
+          // field names too, so a file exported before this feature's
+          // materials-from-recipe rework still imports cleanly.
+          targetQty: m.targetQty || m.batchYield || 1,
+          minutesPerRound: (m.minutesPerRound != null) ? m.minutesPerRound : null,
+          notes: m.notes || m.materialsNote || '',
+          isCraftable: !!m.isCraftable,
+          recipeJob: (m.recipeJob != null) ? m.recipeJob : null,
+          recipeLvl: (m.recipeLvl != null) ? m.recipeLvl : null,
+          ingredients: Array.isArray(m.ingredients) ? m.ingredients : null,
+          manualPrice: (m.manualPrice != null) ? m.manualPrice : null,
+          unit: null, typicalPrice: null, outlier: false, checkedAt: null,
+          createdAt: m.createdAt || new Date().toISOString(),
+        });
+        currentItemIds.add(String(m.itemId));
+        added++;
+      });
+      saveGilMethods(current);
+      renderGilMethods();
+      const c = document.getElementById('gilImportConfirm');
+      c.textContent = added ? ('Imported ' + added + ' method(s).') : 'Nothing new to import — already had all of those.';
+      c.classList.remove('hidden');
+      setTimeout(()=>c.classList.add('hidden'), 3500);
+    }catch(e){
+      alert('That doesn\'t look like a gil/hour methods export file (' + e.message + ').');
+    }
+  };
+  reader.readAsText(file);
+}
+
 function exportWatchlist(){
   const list = loadWatchlist();
   if (!list.length){ alert('Watchlist is empty — nothing to export yet.'); return; }
@@ -5890,12 +6385,16 @@ const WINDOW_META = {
   dailyTasks: { emoji:'✅', label:'Daily Tasks' },
   todo: { emoji:'📝', label:'To-Do' },
   goldSaucer: { emoji:'🎰', label:'Gold Saucer' },
+  gilHour: { emoji:'⏱️', label:'Gil/Hour' },
 };
 const PRESET_META = {
   glamourFitting: { emoji:'👗', label:'Glamour Fitting layout' },
   craftingDesk: { emoji:'📦', label:'Crafting Desk layout' },
   marketWatch: { emoji:'📊', label:'Market Watch layout' },
   collectorsCorner: { emoji:'🐴', label:"Collector's Corner layout" },
+  dailyGrind: { emoji:'✅', label:'Daily Grind layout' },
+  gilFarmer: { emoji:'⏱️', label:'Gil Farmer layout' },
+  socialButterfly: { emoji:'🧑‍🎤', label:'Social Butterfly layout' },
 };
 let paletteActiveIdx = -1;
 let paletteRowsCache = [];
@@ -6023,6 +6522,19 @@ document.addEventListener('keydown', (e)=>{
 document.getElementById('cactpotResetBtn').addEventListener('click', resetCactpotGrid);
 renderCactpotPayoutTable();
 renderCactpotSolver();
+
+document.getElementById('gilAddBtn').addEventListener('click', addOrUpdateGilMethod);
+document.getElementById('gilCancelEditBtn').addEventListener('click', cancelEditGilMethod);
+document.getElementById('gilItemInput').addEventListener('keydown', e=>{ if (e.key === 'Enter') addOrUpdateGilMethod(); });
+document.getElementById('gilRefreshBtn').addEventListener('click', ()=>recheckGilMethods(false));
+document.getElementById('gilExportBtn').addEventListener('click', exportGilMethods);
+document.getElementById('gilImportBtn').addEventListener('click', ()=>document.getElementById('gilImportFile').click());
+document.getElementById('gilImportFile').addEventListener('change', (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if (file) importGilMethodsFile(file);
+  e.target.value = '';
+});
+renderGilMethods();
 
 document.getElementById('backupExportBtn').addEventListener('click', exportAllData);
 document.getElementById('backupImportBtn').addEventListener('click', ()=>document.getElementById('backupImportFile').click());
